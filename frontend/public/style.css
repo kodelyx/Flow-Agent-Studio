@@ -232,7 +232,7 @@ body {
     display: grid;
     grid-template-columns: 420px 1fr;
     gap: 2rem;
-    align-items: stretch;
+    align-items: start;
 }
 
 .ios-card {
