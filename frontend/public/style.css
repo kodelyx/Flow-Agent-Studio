@@ -343,6 +343,51 @@ body {
     box-shadow: 0 0 15px rgba(255, 55, 95, 0.05);
 }
 
+.bulk-upload-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    transition: var(--transition-smooth);
+}
+
+.bulk-upload-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-primary);
+}
+
+.bulk-sample-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: var(--transition-smooth);
+}
+
+.bulk-sample-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-primary);
+}
+
+.textarea-dragover {
+    border-color: var(--accent-red) !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 15px rgba(255, 55, 95, 0.15) !important;
+}
+
 .settings-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1478,6 +1523,90 @@ body {
     object-fit: cover;
     border-radius: 12px;
     box-shadow: var(--shadow-premium);
+}
+
+/* Bulk Panel Styles */
+#panel-bulk .ios-dropzone {
+    margin-bottom: 0.5rem;
+}
+
+#bulk-template-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#bulk-template-info .file-name {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+#bulk-template-info .file-status {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+#btn-clear-bulk {
+    background: none;
+    border: none;
+    color: var(--accent-red);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    transition: var(--transition-smooth);
+}
+
+#btn-clear-bulk:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+#btn-start-bulk {
+    margin-top: 1rem;
+}
+
+#btn-cancel-queue {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #ef4444 !important;
+    transition: var(--transition-smooth);
+}
+
+#btn-cancel-queue:hover {
+    background: #ef4444;
+    color: #ffffff !important;
+}
+
+/* Premium Bulk Loader Animations */
+@keyframes slowPendingSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.pending-spinner-circle {
+    width: 38px;
+    height: 38px;
+    border: 3px dashed rgba(0, 0, 0, 0.08);
+    border-top: 3px solid rgba(142, 142, 147, 0.85);
+    border-radius: 50%;
+    animation: slowPendingSpin 4s linear infinite;
+}
+
+.generating-spinner-circle {
+    width: 38px;
+    height: 38px;
+    border: 3px solid rgba(255, 55, 95, 0.12);
+    border-top: 3px solid var(--accent-red, #ff375f);
+    border-radius: 50%;
+    animation: ringSpin 0.9s linear infinite;
+    filter: drop-shadow(0 0 5px rgba(255, 55, 95, 0.3));
 }
 
 

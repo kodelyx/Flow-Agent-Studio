@@ -1,10 +1,15 @@
-const API_BASE = 'http://127.0.0.1:8001';
+import { initBulkPromptUploader, addBulkImageReference, loadedBulkItems, loadedFilename, activeImgQueue, activeVidQueue, bulkRowStatus } from './prompt.js';
+import { animateTabSwitch, animateGalleryItems, animateButtonPress } from './animation.js';
+import * as XLSX from 'xlsx';
 
-interface GeneratedAsset {
+export const API_BASE = 'http://127.0.0.1:8001';
+
+export interface GeneratedAsset {
     type: 'image' | 'video';
     url: string;
     prompt: string;
     media_id?: string;
+    isBulk?: boolean;
 }
 
 interface ReferenceImage {
@@ -28,12 +33,12 @@ const tabContents = document.querySelectorAll<HTMLDivElement>('.panel-content');
 const btnGenerateImg = document.getElementById('btn-generate-img') as HTMLButtonElement | null;
 const btnGenerateVid = document.getElementById('btn-generate-vid') as HTMLButtonElement | null;
 const imgPrompt = document.getElementById('img-prompt') as HTMLTextAreaElement | null;
-const imgSize = document.getElementById('img-size') as HTMLSelectElement | null;
-const imgCount = document.getElementById('img-count') as HTMLSelectElement | null;
+export const imgSize = document.getElementById('img-size') as HTMLSelectElement | null;
+export const imgCount = document.getElementById('img-count') as HTMLSelectElement | null;
 const vidPrompt = document.getElementById('vid-prompt') as HTMLTextAreaElement | null;
-const vidAspect = document.getElementById('vid-aspect') as HTMLSelectElement | null;
-const vidCount = document.getElementById('vid-count') as HTMLSelectElement | null;
-const vidDuration = document.getElementById('vid-duration') as HTMLSelectElement | null;
+export const vidAspect = document.getElementById('vid-aspect') as HTMLSelectElement | null;
+export const vidCount = document.getElementById('vid-count') as HTMLSelectElement | null;
+export const vidDuration = document.getElementById('vid-duration') as HTMLSelectElement | null;
 const assetCountBadge = document.getElementById('asset-count') as HTMLSpanElement | null;
 const btnClearCanvas = document.getElementById('btn-clear-canvas') as HTMLButtonElement | null;
 const emptyState = document.getElementById('empty-state') as HTMLDivElement | null;
@@ -71,7 +76,7 @@ const imgRefImagesContainer = document.getElementById('img-ref-images-container'
 const imgRefLabel = document.getElementById('img-ref-label') as HTMLLabelElement | null;
 const imgDropzonePlaceholder = document.getElementById('img-dropzone-placeholder') as HTMLDivElement | null;
 
-let assets: GeneratedAsset[] = (() => {
+export let assets: GeneratedAsset[] = (() => {
     try {
         const saved = localStorage.getItem('canvasAssets');
         return saved ? JSON.parse(saved) : [];
@@ -80,8 +85,30 @@ let assets: GeneratedAsset[] = (() => {
         return [];
     }
 })();
-let selectedReferences: ReferenceImage[] = [];
-let selectedImageReferences: ReferenceImage[] = [];
+export let selectedReferences: ReferenceImage[] = [];
+export let selectedImageReferences: ReferenceImage[] = [];
+
+export function clearSelectedImageReferences() {
+    selectedImageReferences = [];
+    updateImageReferencesUI();
+}
+
+export function clearSelectedReferences() {
+    selectedReferences = [];
+    updateReferencesUI();
+}
+
+export function clearCanvasAssets(type: 'image' | 'video') {
+    assets = assets.filter(asset => !(asset.type === type && !asset.isBulk));
+    localStorage.setItem('canvasAssets', JSON.stringify(assets));
+    updateGallery();
+}
+
+export function clearBulkAssets() {
+    assets = assets.filter(asset => !asset.isBulk);
+    localStorage.setItem('canvasAssets', JSON.stringify(assets));
+    updateGallery();
+}
 let activeLightboxAsset: GeneratedAsset | null = null;
 let activeImageUploadsCount = 0;
 let activeVideoUploadsCount = 0;
@@ -103,7 +130,10 @@ tabBtns.forEach(btn => {
         const tabName = btn.dataset.tab;
         if (tabName) {
             const targetPanel = document.getElementById(`panel-${tabName}`);
-            if (targetPanel) targetPanel.classList.add('active');
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+                animateTabSwitch(targetPanel);
+            }
             localStorage.setItem('activeTab', tabName);
             updateGallery(); // Refresh the gallery filter when tab switches!
         }
@@ -605,17 +635,20 @@ function updateReferencesUI() {
 }
 
 // Canvas Loading controller
-function setCanvasLoading(isLoading: boolean, title: string = 'Generating...', status: string = '', type?: 'image' | 'video') {
+export function setCanvasLoading(isLoading: boolean, title: string = 'Generating...', status: string = '', type?: 'image' | 'video') {
     const targetType = type || (localStorage.getItem('activeTab') || 'image') as 'image' | 'video';
     
+    // Check if bulk queue is running
+    const isBulk = (activeImgQueue && activeImgQueue.isRunning) || (activeVidQueue && activeVidQueue.isRunning);
+    
     if (targetType === 'image') {
-        isGeneratingImg = isLoading;
+        isGeneratingImg = isBulk ? false : isLoading;
         if (isLoading) {
             imgLoadingTitle = title;
             imgLoadingStatus = status;
         }
     } else {
-        isGeneratingVid = isLoading;
+        isGeneratingVid = isBulk ? false : isLoading;
         if (isLoading) {
             vidLoadingTitle = title;
             vidLoadingStatus = status;
@@ -625,7 +658,7 @@ function setCanvasLoading(isLoading: boolean, title: string = 'Generating...', s
     updateGallery();
 }
 
-function setButtonLoading(btn: HTMLButtonElement | null, isLoading: boolean) {
+export function setButtonLoading(btn: HTMLButtonElement | null, isLoading: boolean) {
     if (btn) {
         btn.disabled = isLoading;
     }
@@ -633,11 +666,21 @@ function setButtonLoading(btn: HTMLButtonElement | null, isLoading: boolean) {
 
 if (btnClearCanvas) {
     btnClearCanvas.addEventListener('click', () => {
-        if (assets.length === 0) {
+        const activeTab = localStorage.getItem('activeTab') || 'image';
+        const initialLen = assets.length;
+        if (activeTab === 'bulk') {
+            assets = assets.filter(asset => !asset.isBulk);
+        } else if (activeTab === 'image') {
+            assets = assets.filter(asset => !(asset.type === 'image' && !asset.isBulk));
+        } else {
+            assets = assets.filter(asset => !(asset.type === 'video' && !asset.isBulk));
+        }
+        
+        if (assets.length === initialLen) {
             showToast('Canvas is already empty', 'info');
             return;
         }
-        assets = [];
+        
         localStorage.setItem('canvasAssets', JSON.stringify(assets));
         updateGallery();
         showToast('Canvas cleared successfully!', 'success');
@@ -647,6 +690,7 @@ if (btnClearCanvas) {
 // Image Generation
 if (btnGenerateImg) {
     btnGenerateImg.addEventListener('click', async () => {
+        animateButtonPress(btnGenerateImg);
         if (!imgPrompt || !imgSize || !imgCount) return;
         const prompt = imgPrompt.value.trim();
         if (!prompt) {
@@ -751,6 +795,7 @@ if (btnGenerateImg) {
 // Video Generation
 if (btnGenerateVid) {
     btnGenerateVid.addEventListener('click', async () => {
+        animateButtonPress(btnGenerateVid);
         if (!vidPrompt || !vidAspect || !vidCount) return;
         const prompt = vidPrompt.value.trim();
         if (!prompt) {
@@ -840,22 +885,55 @@ if (btnGenerateVid) {
 }
 
 // Helpers
-function addAsset(asset: GeneratedAsset) {
+export function addAsset(asset: GeneratedAsset) {
     assets.unshift(asset);
     localStorage.setItem('canvasAssets', JSON.stringify(assets));
     updateGallery();
 }
 
-function updateGallery() {
+export function updateGallery() {
     if (!assetCountBadge || !emptyState || !galleryGrid || !galleryLoader || !loaderTitle) return;
     
     const activeTab = localStorage.getItem('activeTab') || 'image';
+    
+    const bulkTemplateDownload = document.getElementById('bulk-template-download');
+    const bulkResultsExport = document.getElementById('bulk-results-export');
+    
+    // Get bulk assets count
+    const bulkAssetsCount = assets.filter(asset => asset.isBulk === true).length;
+    
+    if (bulkTemplateDownload) {
+        if (activeTab === 'bulk') {
+            bulkTemplateDownload.classList.remove('hide');
+        } else {
+            bulkTemplateDownload.classList.add('hide');
+        }
+    }
+    
+    if (bulkResultsExport) {
+        if (activeTab === 'bulk' && bulkAssetsCount > 0) {
+            bulkResultsExport.classList.remove('hide');
+        } else {
+            bulkResultsExport.classList.add('hide');
+        }
+    }
+
+    let targetType = activeTab;
+    if (activeTab === 'bulk') {
+        const imageCount = loadedBulkItems.filter(item => item.type === 'image').length;
+        const videoCount = loadedBulkItems.filter(item => item.type === 'video').length;
+        if (videoCount > 0 && imageCount === 0) {
+            targetType = 'video';
+        } else {
+            targetType = 'image';
+        }
+    }
     
     // Toggle Dynamic Action groups
     const imageActions = document.getElementById('gallery-image-actions');
     const videoActions = document.getElementById('gallery-video-actions');
     if (imageActions && videoActions) {
-        if (activeTab === 'image') {
+        if (targetType === 'image') {
             imageActions.classList.remove('hide');
             videoActions.classList.add('hide');
         } else {
@@ -863,90 +941,275 @@ function updateGallery() {
             videoActions.classList.remove('hide');
         }
     }
+    const isGenerating = activeTab === 'image'
+        ? isGeneratingImg
+        : (activeTab === 'video' ? isGeneratingVid : (isGeneratingImg || isGeneratingVid));
     
-    // Check if the currently active tab is generating/loading
-    const isGenerating = activeTab === 'image' ? isGeneratingImg : isGeneratingVid;
-    
-    if (isGenerating) {
+    if (isGenerating && activeTab !== 'bulk') {
         galleryLoader.classList.remove('hide');
         emptyState.classList.add('hide');
         galleryGrid.classList.add('hide');
         
-        loaderTitle.textContent = activeTab === 'image' ? imgLoadingTitle : vidLoadingTitle;
-        if (loaderStatus) {
-            loaderStatus.textContent = activeTab === 'image' ? imgLoadingStatus : vidLoadingStatus;
+        if (activeTab === 'image') {
+            loaderTitle.textContent = imgLoadingTitle;
+            if (loaderStatus) loaderStatus.textContent = imgLoadingStatus;
+        } else if (activeTab === 'video') {
+            loaderTitle.textContent = vidLoadingTitle;
+            if (loaderStatus) loaderStatus.textContent = vidLoadingStatus;
+        } else {
+            loaderTitle.textContent = isGeneratingImg ? imgLoadingTitle : vidLoadingTitle;
+            if (loaderStatus) {
+                loaderStatus.textContent = isGeneratingImg ? imgLoadingStatus : vidLoadingStatus;
+            }
         }
         return;
     }
     
     galleryLoader.classList.add('hide');
     
-    const filteredAssets = assets.filter(asset => asset.type === activeTab);
+    const filteredAssets = assets.filter(asset => {
+        if (activeTab === 'bulk') {
+            return asset.isBulk === true;
+        } else if (activeTab === 'image') {
+            return asset.type === 'image' && !asset.isBulk;
+        } else {
+            return asset.type === 'video' && !asset.isBulk;
+        }
+    });
     
     assetCountBadge.textContent = `${filteredAssets.length}`;
     
-    if (filteredAssets.length === 0) {
-        emptyState.classList.remove('hide');
-        galleryGrid.classList.add('hide');
-        const emptyTitle = emptyState.querySelector('h3');
-        if (emptyTitle) {
-            if (activeTab === 'image') {
-                emptyTitle.textContent = "No Image Assets";
+    // CUSTOM BULK GENERATOR RENDERING WITH DYNAMIC PLACEHOLDERS
+    if (activeTab === 'bulk' && loadedBulkItems && loadedBulkItems.length > 0) {
+        emptyState.classList.add('hide');
+        galleryGrid.classList.remove('hide');
+
+        const itemsHtml = loadedBulkItems.flatMap((item, idx) => {
+            const matchingAssets = filteredAssets.filter(asset => asset.prompt === item.prompt);
+            
+            if (matchingAssets.length > 0) {
+                return matchingAssets.map(asset => {
+                    const globalIndex = assets.indexOf(asset);
+                    if (asset.type === 'image') {
+                        const addBtnHtml = asset.media_id
+                            ? `
+                              <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Create Image</button>
+                              <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Create Video</button>
+                              `
+                            : '';
+                        return `
+                            <div class="gallery-item" data-index="${globalIndex}" draggable="true">
+                                <div class="gallery-media-wrapper">
+                                    <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
+                                </div>
+                                <div class="gallery-item-footer">
+                                    <div class="overlay-buttons" style="margin-bottom: 4px;">
+                                        ${addBtnHtml}
+                                        <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
+                                    </div>
+                                    <div class="overlay-prompt" style="font-size: 0.78rem; font-weight: 700; color: var(--text-primary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(asset.prompt)}">
+                                        #${idx + 1}: ${escapeHtml(asset.prompt)}
+                                    </div>
+                                    <div style="font-size: 0.68rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; margin-top: 2px;">
+                                        IMAGE
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        const addBtnHtml = asset.media_id
+                            ? `
+                              <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Create Video</button>
+                              `
+                            : '';
+                        const autoplayAttr = autoplayVideos ? 'autoplay' : '';
+                        return `
+                            <div class="gallery-item" data-index="${globalIndex}" draggable="true">
+                                <div class="gallery-media-wrapper">
+                                    <video src="${asset.url}" muted loop ${autoplayAttr}></video>
+                                    ${autoplayVideos ? '' : '<div class="play-badge">▶</div>'}
+                                </div>
+                                <div class="gallery-item-footer">
+                                    <div class="overlay-buttons" style="margin-bottom: 4px;">
+                                        ${addBtnHtml}
+                                        <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
+                                    </div>
+                                    <div class="overlay-prompt" style="font-size: 0.78rem; font-weight: 700; color: var(--text-primary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(asset.prompt)}">
+                                        #${idx + 1}: ${escapeHtml(asset.prompt)}
+                                    </div>
+                                    <div style="font-size: 0.68rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; margin-top: 2px;">
+                                        VIDEO
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
             } else {
-                emptyTitle.textContent = "No Video Assets";
+                let statusLabel = 'Waiting';
+                let spinnerClass = 'pending-spinner-circle';
+                
+                const customStatus = bulkRowStatus[idx];
+                if (customStatus) {
+                    statusLabel = customStatus;
+                    if (customStatus === 'Generating...') {
+                        spinnerClass = 'generating-spinner-circle';
+                    } else {
+                        spinnerClass = 'pending-spinner-circle';
+                    }
+                } else {
+                    let isQueueRunning = false;
+                    const imgQueue = activeImgQueue;
+                    if (item.type === 'image') {
+                        const imageItems = loadedBulkItems.filter(it => it.type === 'image');
+                        const imgIdx = imageItems.indexOf(item);
+                        if (imgQueue && imgQueue.isRunning) {
+                            isQueueRunning = true;
+                            if (imgIdx === imgQueue.currentIndex) {
+                                statusLabel = 'Generating...';
+                                spinnerClass = 'generating-spinner-circle';
+                            } else if (imgIdx > imgQueue.currentIndex) {
+                                statusLabel = 'Waiting';
+                                spinnerClass = 'pending-spinner-circle';
+                            } else {
+                                statusLabel = 'Skipped';
+                                spinnerClass = 'pending-spinner-circle';
+                            }
+                        }
+                    } else {
+                        const videoItems = loadedBulkItems.filter(it => it.type === 'video');
+                        const vidIdx = videoItems.indexOf(item);
+                        const vidQueue = activeVidQueue;
+                        if (vidQueue && vidQueue.isRunning) {
+                            isQueueRunning = true;
+                            if (vidIdx === vidQueue.currentIndex) {
+                                statusLabel = 'Generating...';
+                                spinnerClass = 'generating-spinner-circle';
+                            } else if (vidIdx > vidQueue.currentIndex) {
+                                statusLabel = 'Waiting';
+                                spinnerClass = 'pending-spinner-circle';
+                            } else {
+                                statusLabel = 'Skipped';
+                                spinnerClass = 'pending-spinner-circle';
+                            }
+                        }
+                    }
+                    
+                    if (!isQueueRunning) {
+                        statusLabel = 'Waiting';
+                        spinnerClass = 'pending-spinner-circle';
+                    }
+                }
+                
+                const bulkImgSize = document.getElementById('bulk-img-size') as HTMLSelectElement | null;
+                const bulkVidAspect = document.getElementById('bulk-vid-aspect') as HTMLSelectElement | null;
+                const currentSize = item.size || (bulkImgSize?.value ?? '1024x1024');
+                const currentAspect = item.aspect || (bulkVidAspect?.value ?? 'landscape');
+
+                const details = item.type === 'image' 
+                    ? ` • ${currentSize}`
+                    : ` • ${currentAspect}` + (item.duration ? ` • ${item.duration}s` : '');
+
+                return `
+                    <div class="gallery-item bulk-placeholder" style="cursor: default; opacity: 0.85;">
+                        <div class="gallery-media-wrapper" style="background: rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                                <div class="${spinnerClass}"></div>
+                                <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;">
+                                    ${statusLabel}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="gallery-item-footer" style="padding: 0.8rem; display: flex; flex-direction: column; gap: 4px;">
+                            <div class="overlay-prompt" style="font-weight: 700; color: var(--text-primary); font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.prompt)}">
+                                #${idx + 1}: ${escapeHtml(item.prompt)}
+                            </div>
+                            <div style="font-size: 0.68rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; margin-top: 2px;">
+                                ${item.type.toUpperCase()}${details}
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
+        }).join('');
+
+        galleryGrid.innerHTML = itemsHtml;
+    } else {
+        if (filteredAssets.length === 0) {
+            emptyState.classList.remove('hide');
+            galleryGrid.classList.add('hide');
+            emptyState.innerHTML = `
+                <div class="empty-icon">📁</div>
+                <h3>No Assets</h3>
+                <p style="color: var(--text-secondary); font-size: 0.90rem; margin-top: 4px;">Upload a template file on the sidebar to get started.</p>
+            `;
+            const emptyTitle = emptyState.querySelector('h3');
+            if (emptyTitle) {
+                if (activeTab === 'image') {
+                    emptyTitle.textContent = "No Image Assets";
+                } else if (activeTab === 'video') {
+                    emptyTitle.textContent = "No Video Assets";
+                } else {
+                    emptyTitle.textContent = "No Bulk Assets";
+                }
+            }
+            return;
         }
-        return;
+
+        emptyState.classList.add('hide');
+        galleryGrid.classList.remove('hide');
+
+        galleryGrid.innerHTML = filteredAssets.map((asset) => {
+            const globalIndex = assets.indexOf(asset);
+            if (asset.type === 'image') {
+                const addBtnHtml = asset.media_id
+                    ? `
+                      <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Create Image</button>
+                      <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Create Video</button>
+                      `
+                    : '';
+                return `
+                    <div class="gallery-item" data-index="${globalIndex}" draggable="true">
+                        <div class="gallery-media-wrapper">
+                            <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
+                        </div>
+                        <div class="gallery-item-footer">
+                            <div class="overlay-buttons">
+                                ${addBtnHtml}
+                                <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const addBtnHtml = asset.media_id
+                    ? `
+                      <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Create Video</button>
+                      `
+                    : '';
+                const autoplayAttr = autoplayVideos ? 'autoplay' : '';
+                return `
+                    <div class="gallery-item" data-index="${globalIndex}" draggable="true">
+                        <div class="gallery-media-wrapper">
+                            <video src="${asset.url}" muted loop ${autoplayAttr}></video>
+                            ${autoplayVideos ? '' : '<div class="play-badge">▶</div>'}
+                        </div>
+                        <div class="gallery-item-footer">
+                            <div class="overlay-buttons">
+                                ${addBtnHtml}
+                                <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }).join('');
     }
 
-    emptyState.classList.add('hide');
-    galleryGrid.classList.remove('hide');
-
-    galleryGrid.innerHTML = filteredAssets.map((asset) => {
-        const globalIndex = assets.indexOf(asset);
-        if (asset.type === 'image') {
-            const addBtnHtml = asset.media_id
-                ? `
-                  <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Create Image</button>
-                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Create Video</button>
-                  `
-                : '';
-            return `
-                <div class="gallery-item" data-index="${globalIndex}" draggable="true">
-                    <div class="gallery-media-wrapper">
-                        <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
-                    </div>
-                    <div class="gallery-item-footer">
-                        <div class="overlay-buttons">
-                            ${addBtnHtml}
-                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            const addBtnHtml = asset.media_id
-                ? `
-                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Create Video</button>
-                  `
-                : '';
-            const autoplayAttr = autoplayVideos ? 'autoplay' : '';
-            return `
-                <div class="gallery-item" data-index="${globalIndex}" draggable="true">
-                    <div class="gallery-media-wrapper">
-                        <video src="${asset.url}" muted loop ${autoplayAttr}></video>
-                        ${autoplayVideos ? '' : '<div class="play-badge">▶</div>'}
-                    </div>
-                    <div class="gallery-item-footer">
-                        <div class="overlay-buttons">
-                            ${addBtnHtml}
-                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-    }).join('');
+    // Trigger stagger animations on rendered gallery items
+    const galleryItems = galleryGrid.querySelectorAll<HTMLDivElement>('.gallery-item');
+    animateGalleryItems(galleryItems);
+    animateGalleryItems(galleryItems);
 
     // Attach click listeners to gallery items (excluding buttons inside)
     document.querySelectorAll<HTMLDivElement>('.gallery-item').forEach(item => {
@@ -1083,6 +1346,12 @@ if (modalAddToVideo) {
                 } else {
                     showToast("You can only add image references to the Image Generator.", "error");
                 }
+            } else if (activeTab === 'bulk') {
+                if (activeLightboxAsset.type === 'image') {
+                    addBulkImageReference(activeLightboxAsset.url, activeLightboxAsset.media_id);
+                } else {
+                    showToast("Only image references are supported for bulk generation style.", "error");
+                }
             } else {
                 addReference(activeLightboxAsset.url, activeLightboxAsset.media_id);
             }
@@ -1146,7 +1415,7 @@ if (mediaModal) {
     });
 }
 
-async function updateCredits() {
+export async function updateCredits() {
     const creditsBadge = document.getElementById('credits-badge');
     const creditsCount = document.getElementById('credits-count');
     if (!creditsBadge || !creditsCount) return;
@@ -1203,7 +1472,7 @@ function escapeHtml(str: string): string {
         .replace(/'/g, '&#039;');
 }
 
-function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+export function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
     
@@ -1400,6 +1669,13 @@ async function loadHistory() {
                             showToast("You can only add image references to the Image Generator.", "error");
                             return;
                         }
+                    } else if (activeTab === 'bulk') {
+                        if (type === 'image') {
+                            addBulkImageReference(url, mediaId);
+                        } else {
+                            showToast("Only image references are supported for bulk generation style.", "error");
+                            return;
+                        }
                     } else {
                         addReference(url, mediaId);
                     }
@@ -1500,4 +1776,49 @@ async function loadHistory() {
     } catch (err) {
         historyViewItems.innerHTML = '<div class="history-empty">No generations in history. Start creating!</div>';
     }
+}
+
+// Initialize Bulk Prompt Uploader
+initBulkPromptUploader();
+
+// Wire Bulk Results Excel Export Button
+const btnBulkResultsExport = document.getElementById('bulk-results-export');
+if (btnBulkResultsExport) {
+    btnBulkResultsExport.addEventListener('click', () => {
+        const bulkAssets = assets.filter(asset => asset.isBulk === true);
+        if (bulkAssets.length === 0) {
+            showToast('No bulk assets found to export.', 'error');
+            return;
+        }
+
+        const dataToExport = bulkAssets.map((asset, index) => {
+            const urlParts = asset.url.split('/');
+            const filename = urlParts[urlParts.length - 1];
+            return {
+                "S.No": index + 1,
+                "Prompt": asset.prompt,
+                "Media Type": asset.type,
+                "Media ID": asset.media_id || 'N/A',
+                "File Name": filename,
+                "URL": asset.url
+            };
+        });
+
+        try {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            XLSX.utils.book_append_sheet(wb, ws, "Bulk Generation Results");
+            
+            // Format filename based on loaded template name or default
+            const exportName = loadedFilename 
+                ? `results_${loadedFilename.replace(/\.[^/.]+$/, "")}.xlsx` 
+                : 'bulk_generation_results.xlsx';
+                
+            XLSX.writeFile(wb, exportName);
+            showToast(`Exported results as ${exportName}!`, 'success');
+        } catch (e) {
+            console.error('Error generating export Excel:', e);
+            showToast('Failed to export Excel file.', 'error');
+        }
+    });
 }

@@ -1,8 +1,8 @@
-import { Glows } from './Glows'
-import { Header } from './Header'
-import { Controls } from './Controls'
-import { Gallery } from './Gallery'
-import { Lightbox } from './Lightbox'
+import { Glows } from './Glows.js'
+import { Header } from './Header.js'
+import { Controls } from './Controls.js'
+import { Gallery } from './Gallery.js'
+import { Lightbox } from './Lightbox.js'
 
 export const Layout = () => {
   return (
@@ -10,13 +10,13 @@ export const Layout = () => {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Flow Agent AI — iOS 18 Studio</title>
+        <title>Flow-Agent</title>
         {/* Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
         {/* Stylesheet */}
-        <link rel="stylesheet" href="/static/public/style.css" />
+        <link rel="stylesheet" href={`/static/public/style.css?v=${Date.now()}`} />
       </head>
       <body>
         <Glows />
@@ -54,7 +54,7 @@ export const Layout = () => {
         <div class="ios-toast-container" id="toast-container"></div>
 
         {/* Script */}
-        <script src="/static/public/app.js"></script>
+        <script src={`/static/public/app.js?v=${Date.now()}`}></script>
       </body>
     </html>
   )

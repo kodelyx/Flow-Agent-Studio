@@ -12,6 +12,7 @@ export const Header = () => {
         <div class="ios-segmented-control">
           <button class="segment-btn active" data-tab="image">Image Generator</button>
           <button class="segment-btn" data-tab="video">Video Generator</button>
+          <button class="segment-btn" data-tab="bulk">Bulk Generator</button>
         </div>
       </div>
 

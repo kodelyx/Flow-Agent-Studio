@@ -2,7 +2,7 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { Layout } from './components/Layout'
+import { Layout } from './components/Layout.js'
 
 const app = new Hono()
 
