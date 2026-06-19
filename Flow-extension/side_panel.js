@@ -115,11 +115,11 @@ function updateRequestLog(entries) {
 
   if (!entries || entries.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="log-empty">No requests yet</td></tr>';
-    countEl.textContent = '0';
+    if (countEl) countEl.textContent = '0';
     return;
   }
 
-  countEl.textContent = entries.length;
+  if (countEl) countEl.textContent = entries.length;
   _logEntries = entries;
 
   // Render newest first (entries already sorted DESC by background.js)
