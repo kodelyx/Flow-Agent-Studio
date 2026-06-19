@@ -124,3 +124,16 @@ The FastAPI server exposes the following endpoints on port `8001`:
 - **Backend**: FastAPI (Python), Uvicorn, WebSocket, Asyncio
 - **Frontend**: React, TypeScript, Vanilla CSS
 - **Bridge**: Chrome Extension (manifest v3), WebSocket Communication
+
+---
+
+## 🎨 Recent Studio UI & Lightbox Updates
+
+We recently updated the studio interface to match premium iOS 18 design guidelines:
+
+- **Simplified Gallery Header**: Removed clustered context action groups (`Auto-play`, `Add All`, `Download All` buttons) from the gallery card header. Replaced them with a single text-based `Clear` button matching the exact style of the `History` button.
+- **Count Badge Alignment**: Repositioned the active canvas asset count badge from the far left of the header to sit directly next to the `Clear` button on the right for unified actions.
+- **Minimalist Empty States**: Cleaned up the empty state template by removing the red circle emoji (`🔴`) and the verbose instructions, keeping the layout completely uncluttered.
+- **Premium Glassmorphic Lightbox**: Replaced the opaque pitch-black backdrop with a translucent, sharp overlay (`rgba(15, 23, 42, 0.15)`) that lets the studio show through clearly. Restyled the lightbox content container as a frosted glass popover card with a spring-spring scale opening animation, responsive media constraints (`50vh`), and high-contrast control buttons.
+- **Unified Panel Heights**: Aligned bottom card borders by changing `.ios-grid` layout container alignment to `align-items: stretch`, ensuring the Controls card and Gallery card are perfectly balanced.
+
