@@ -1054,9 +1054,9 @@ body {
 
 .add-to-vid-btn {
     padding: 0.45rem 0.2rem;
-    background: rgba(255, 55, 95, 0.06);
-    border: 1px solid rgba(255, 55, 95, 0.18);
-    color: var(--accent-red);
+    background: rgba(71, 85, 105, 0.06);
+    border: 1px solid rgba(71, 85, 105, 0.18);
+    color: var(--text-secondary);
     font-family: var(--font-heading);
     font-size: 0.68rem;
     font-weight: 700;
@@ -1072,10 +1072,10 @@ body {
 }
 
 .add-to-vid-btn:hover {
-    background: var(--accent-red);
-    border-color: var(--accent-red);
+    background: var(--text-secondary);
+    border-color: var(--text-secondary);
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(255, 55, 95, 0.25);
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.2);
 }
 
 .copy-prompt-btn {
