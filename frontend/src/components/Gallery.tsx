@@ -21,7 +21,9 @@ export const Gallery = () => {
         <div class="loader-visual">
           <div class="pulse-ring"></div>
           <div class="pulse-ring-slow"></div>
-          <div class="loader-icon">✨</div>
+          <div class="loader-icon">
+            <img src="/static/public/logo.png" alt="Logo" class="loader-logo" />
+          </div>
         </div>
         <h3 id="loader-title">Generating...</h3>
       </div>

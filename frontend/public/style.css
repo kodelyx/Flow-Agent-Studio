@@ -691,6 +691,18 @@ body {
     z-index: 2;
     filter: drop-shadow(0 0 10px rgba(255, 55, 95, 0.25));
     animation: starPulse 2.2s infinite ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loader-logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    transform: scale(1.6);
+    mix-blend-mode: multiply;
+    display: block;
 }
 
 @keyframes ringSpin {

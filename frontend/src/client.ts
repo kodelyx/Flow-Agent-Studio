@@ -40,7 +40,7 @@ const emptyState = document.getElementById('empty-state') as HTMLDivElement | nu
 const galleryGrid = document.getElementById('gallery-grid') as HTMLDivElement | null;
 const mediaModal = document.getElementById('media-modal') as HTMLDivElement | null;
 const modalMediaContainer = document.getElementById('modal-media-container') as HTMLDivElement | null;
-const modalPrompt = document.getElementById('modal-prompt') as HTMLParagraphElement | null;
+const btnModalCopyPrompt = document.getElementById('modal-copy-prompt') as HTMLButtonElement | null;
 const modalDownload = document.getElementById('modal-download') as HTMLAnchorElement | null;
 const modalAddToCanvas = document.getElementById('modal-add-to-canvas') as HTMLButtonElement | null;
 const modalAddToVideo = document.getElementById('modal-add-to-video') as HTMLButtonElement | null;
@@ -1000,7 +1000,7 @@ function updateGallery() {
 
 // Lightbox Modal
 function openLightbox(asset: GeneratedAsset) {
-    if (!modalMediaContainer || !modalPrompt || !modalDownload || !mediaModal || !modalAddToVideo) return;
+    if (!modalMediaContainer || !btnModalCopyPrompt || !modalDownload || !mediaModal || !modalAddToVideo) return;
     
     activeLightboxAsset = asset;
     modalMediaContainer.innerHTML = '';
@@ -1034,7 +1034,6 @@ function openLightbox(asset: GeneratedAsset) {
         }
     }
 
-    modalPrompt.textContent = asset.prompt;
     modalDownload.href = asset.url;
     mediaModal.classList.add('open');
 }
@@ -1056,6 +1055,15 @@ if (modalAddToVideo) {
                 mediaModal.classList.remove('open');
                 if (modalMediaContainer) modalMediaContainer.innerHTML = '';
             }
+        }
+    });
+}
+
+if (btnModalCopyPrompt) {
+    btnModalCopyPrompt.addEventListener('click', () => {
+        if (activeLightboxAsset && activeLightboxAsset.prompt) {
+            navigator.clipboard.writeText(activeLightboxAsset.prompt);
+            showToast("Prompt copied to clipboard!", "success");
         }
     });
 }
