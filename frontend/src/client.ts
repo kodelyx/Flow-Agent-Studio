@@ -811,14 +811,11 @@ function updateGallery() {
         emptyState.classList.remove('hide');
         galleryGrid.classList.add('hide');
         const emptyTitle = emptyState.querySelector('h3');
-        const emptyText = emptyState.querySelector('p');
-        if (emptyTitle && emptyText) {
+        if (emptyTitle) {
             if (activeTab === 'image') {
                 emptyTitle.textContent = "No Image Assets";
-                emptyText.textContent = "Generate images using the prompt panel to see them here.";
             } else {
                 emptyTitle.textContent = "No Video Assets";
-                emptyText.textContent = "Generate videos using the prompt panel to see them here.";
             }
         }
         return;

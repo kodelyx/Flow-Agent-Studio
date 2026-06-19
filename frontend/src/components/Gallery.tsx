@@ -15,7 +15,6 @@ export const Gallery = () => {
       <div class="ios-empty" id="empty-state">
         <div class="empty-icon">🔴</div>
         <h3>Studio Idle</h3>
-        <p>Generate high-quality images and video assets. Outputs will display instantly here.</p>
       </div>
 
       {/* Loading State */}
