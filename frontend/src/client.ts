@@ -1001,7 +1001,7 @@ export function updateGallery() {
                             <div class="gallery-item" data-index="${globalIndex}" draggable="true">
                                 <div class="gallery-media-wrapper">
                                     <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
-                                    <a class="media-download-btn" href="${asset.url}" download title="Download Media">
+                                    <a class="media-download-btn" href="${asset.url}" download title="Download Media" onclick="event.stopPropagation();">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                     </a>
                                 </div>
@@ -1031,7 +1031,7 @@ export function updateGallery() {
                                 <div class="gallery-media-wrapper">
                                     <video src="${asset.url}" muted loop ${autoplayAttr}></video>
                                     ${autoplayVideos ? '' : '<div class="play-badge">▶</div>'}
-                                    <a class="media-download-btn" href="${asset.url}" download title="Download Media">
+                                    <a class="media-download-btn" href="${asset.url}" download title="Download Media" onclick="event.stopPropagation();">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                     </a>
                                 </div>
@@ -1178,7 +1178,7 @@ export function updateGallery() {
                     <div class="gallery-item" data-index="${globalIndex}" draggable="true">
                         <div class="gallery-media-wrapper">
                             <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
-                            <a class="media-download-btn" href="${asset.url}" download title="Download Media">
+                            <a class="media-download-btn" href="${asset.url}" download title="Download Media" onclick="event.stopPropagation();">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             </a>
                         </div>
@@ -1202,7 +1202,7 @@ export function updateGallery() {
                         <div class="gallery-media-wrapper">
                             <video src="${asset.url}" muted loop ${autoplayAttr}></video>
                             ${autoplayVideos ? '' : '<div class="play-badge">▶</div>'}
-                            <a class="media-download-btn" href="${asset.url}" download title="Download Media">
+                            <a class="media-download-btn" href="${asset.url}" download title="Download Media" onclick="event.stopPropagation();">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             </a>
                         </div>
@@ -1226,7 +1226,7 @@ export function updateGallery() {
     // Attach click listeners to gallery items (excluding buttons inside)
     document.querySelectorAll<HTMLDivElement>('.gallery-item').forEach(item => {
         item.addEventListener('click', (e) => {
-            if (e.target instanceof HTMLElement && (e.target.closest('.add-to-vid-btn') || e.target.closest('.media-download-btn'))) {
+            if (e.target instanceof Element && (e.target.closest('.add-to-vid-btn') || e.target.closest('.media-download-btn'))) {
                 return;
             }
             const indexStr = item.dataset.index;
