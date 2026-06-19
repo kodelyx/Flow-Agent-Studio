@@ -53,6 +53,12 @@
   var activeLightboxAsset = null;
   var activeImageUploadsCount = 0;
   var activeVideoUploadsCount = 0;
+  var autoplayVideos = false;
+  var btnAutoplayVids = document.getElementById("btn-autoplay-vids");
+  var btnAddAllImg = document.getElementById("btn-add-all-img");
+  var btnDownloadAllImg = document.getElementById("btn-download-all-img");
+  var btnAddAllVid = document.getElementById("btn-add-all-vid");
+  var btnDownloadAllVid = document.getElementById("btn-download-all-vid");
   var isGeneratingImg = false;
   var isGeneratingVid = false;
   var imgLoadingTitle = "Creating Images...";
@@ -520,6 +526,121 @@
       showToast("Canvas cleared successfully!", "success");
     });
   }
+  async function triggerDownload(url, defaultName) {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = defaultName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      window.open(url, "_blank");
+    }
+  }
+  if (btnAutoplayVids) {
+    btnAutoplayVids.addEventListener("click", () => {
+      autoplayVideos = !autoplayVideos;
+      if (autoplayVideos) {
+        btnAutoplayVids.textContent = "\u{1F3AC} Auto-play: On";
+        btnAutoplayVids.classList.add("active");
+        document.querySelectorAll("#gallery-grid video").forEach((video) => {
+          video.play().catch(() => {
+          });
+        });
+      } else {
+        btnAutoplayVids.textContent = "\u{1F3AC} Auto-play: Off";
+        btnAutoplayVids.classList.remove("active");
+        document.querySelectorAll("#gallery-grid video").forEach((video) => {
+          video.pause();
+        });
+      }
+    });
+  }
+  if (btnAddAllImg) {
+    btnAddAllImg.addEventListener("click", () => {
+      const imageAssets = assets.filter((a) => a.type === "image" && a.media_id);
+      if (imageAssets.length === 0) {
+        showToast("No images on the canvas to add.", "info");
+        return;
+      }
+      let addedCount = 0;
+      imageAssets.forEach((asset) => {
+        if (asset.media_id && !selectedImageReferences.some((ref) => ref.media_id === asset.media_id)) {
+          if (selectedImageReferences.length < 10) {
+            selectedImageReferences.push({ url: asset.url, media_id: asset.media_id });
+            addedCount++;
+          }
+        }
+      });
+      if (addedCount > 0) {
+        updateImageReferencesUI();
+        showToast(`Added ${addedCount} images to references!`, "success");
+      } else {
+        showToast("All canvas images are already in references.", "info");
+      }
+    });
+  }
+  if (btnAddAllVid) {
+    btnAddAllVid.addEventListener("click", () => {
+      const videoAssets = assets.filter((a) => a.type === "video" && a.media_id);
+      if (videoAssets.length === 0) {
+        showToast("No videos on the canvas to add.", "info");
+        return;
+      }
+      let addedCount = 0;
+      videoAssets.forEach((asset) => {
+        if (asset.media_id && !selectedReferences.some((ref) => ref.media_id === asset.media_id)) {
+          if (selectedReferences.length < 10) {
+            selectedReferences.push({ url: asset.url, media_id: asset.media_id });
+            addedCount++;
+          }
+        }
+      });
+      if (addedCount > 0) {
+        updateReferencesUI();
+        showToast(`Added ${addedCount} videos to references!`, "success");
+      } else {
+        showToast("All canvas videos are already in references.", "info");
+      }
+    });
+  }
+  if (btnDownloadAllImg) {
+    btnDownloadAllImg.addEventListener("click", async () => {
+      const imageAssets = assets.filter((a) => a.type === "image");
+      if (imageAssets.length === 0) {
+        showToast("No images to download.", "info");
+        return;
+      }
+      showToast("Starting download for all images...", "info");
+      for (let i = 0; i < imageAssets.length; i++) {
+        const asset = imageAssets[i];
+        const filename = asset.url.split("/").pop() || `image_${i + 1}.png`;
+        await triggerDownload(asset.url, filename);
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    });
+  }
+  if (btnDownloadAllVid) {
+    btnDownloadAllVid.addEventListener("click", async () => {
+      const videoAssets = assets.filter((a) => a.type === "video");
+      if (videoAssets.length === 0) {
+        showToast("No videos to download.", "info");
+        return;
+      }
+      showToast("Starting download for all videos...", "info");
+      for (let i = 0; i < videoAssets.length; i++) {
+        const asset = videoAssets[i];
+        const filename = asset.url.split("/").pop() || `video_${i + 1}.mp4`;
+        await triggerDownload(asset.url, filename);
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    });
+  }
   if (btnGenerateImg) {
     btnGenerateImg.addEventListener("click", async () => {
       if (!imgPrompt || !imgSize || !imgCount)
@@ -657,6 +778,17 @@
     if (!assetCountBadge || !emptyState || !galleryGrid || !galleryLoader || !loaderTitle)
       return;
     const activeTab = localStorage.getItem("activeTab") || "image";
+    const imageActions = document.getElementById("gallery-image-actions");
+    const videoActions = document.getElementById("gallery-video-actions");
+    if (imageActions && videoActions) {
+      if (activeTab === "image") {
+        imageActions.classList.remove("hide");
+        videoActions.classList.add("hide");
+      } else {
+        imageActions.classList.add("hide");
+        videoActions.classList.remove("hide");
+      }
+    }
     const isGenerating = activeTab === "image" ? isGeneratingImg : isGeneratingVid;
     if (isGenerating) {
       galleryLoader.classList.remove("hide");
@@ -707,10 +839,11 @@
             `;
       } else {
         const addBtnHtml = asset.media_id ? `<button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>` : "";
+        const autoplayAttr = autoplayVideos ? "autoplay" : "";
         return `
                 <div class="gallery-item" data-index="${globalIndex}" draggable="true">
-                    <video src="${asset.url}" muted loop></video>
-                    <div class="play-badge">\u25B6</div>
+                    <video src="${asset.url}" muted loop ${autoplayAttr}></video>
+                    ${autoplayVideos ? "" : '<div class="play-badge">\u25B6</div>'}
                     <div class="item-overlay">
                         <p class="overlay-prompt">${escapeHtml(asset.prompt)}</p>
                         ${addBtnHtml}
