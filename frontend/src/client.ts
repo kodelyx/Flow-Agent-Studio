@@ -225,6 +225,38 @@ if (vidDropzone && vidFileInput) {
     });
 }
 
+// Global Paste Handler to support pasting images/videos directly as references
+document.addEventListener('paste', async (event) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    const activeTab = localStorage.getItem('activeTab') || 'image';
+    let handled = false;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file') {
+            const file = item.getAsFile();
+            if (!file) continue;
+
+            const isImage = file.type.startsWith('image/');
+            const isVideo = file.type.startsWith('video/');
+
+            if (activeTab === 'image' && isImage) {
+                handleSelectedFile(file, 'image');
+                handled = true;
+            } else if (activeTab === 'video' && (isImage || isVideo)) {
+                handleSelectedFile(file, 'video');
+                handled = true;
+            }
+        }
+    }
+
+    if (handled) {
+        event.preventDefault();
+    }
+});
+
 // Drag & Drop Setup (Image)
 if (imgDropzone && imgFileInput) {
     imgDropzone.addEventListener('click', (e) => {
