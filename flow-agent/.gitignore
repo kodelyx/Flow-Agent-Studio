@@ -1,0 +1,15 @@
+*.mp4
+*.avi
+*.mov
+__pycache__/
+*.pyc
+.env
+venv/
+.DS_Store
+sniffed.json
+sniffed_all.json
+media_ids.json
+output/
+chunks/
+*.mp4
+__pycache__/
