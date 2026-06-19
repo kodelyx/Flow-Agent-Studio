@@ -34,11 +34,11 @@ export const Layout = () => {
             <main class="ios-history-view hide" id="history-view">
               <div class="history-view-header">
                 <div class="header-left">
-                  <h2>Generation Archive</h2>
+                  <h2>Generation History</h2>
                 </div>
                 <div class="header-right" style="display: flex; gap: 0.75rem; align-items: center;">
                   <button class="back-btn" id="btn-history-back">← Back to Studio</button>
-                  <button class="history-clear-btn" id="btn-history-clear">Clear Archive</button>
+                  <button class="history-clear-btn" id="btn-history-clear">Clear History</button>
                 </div>
               </div>
               
