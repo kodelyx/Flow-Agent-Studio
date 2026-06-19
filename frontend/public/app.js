@@ -702,8 +702,10 @@
       const globalIndex = assets.indexOf(asset);
       if (asset.type === "image") {
         const addBtnHtml = asset.media_id ? `
-                  <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Add Image Ref</button>
-                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
+                  <div class="overlay-buttons">
+                      <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Add Image Ref</button>
+                      <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
+                  </div>
                   ` : "";
         return `
                 <div class="gallery-item" data-index="${globalIndex}" draggable="true">
@@ -715,7 +717,11 @@
                 </div>
             `;
       } else {
-        const addBtnHtml = asset.media_id ? `<button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>` : "";
+        const addBtnHtml = asset.media_id ? `
+                  <div class="overlay-buttons">
+                      <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
+                  </div>
+                  ` : "";
         const autoplayAttr = autoplayVideos ? "autoplay" : "";
         return `
                 <div class="gallery-item" data-index="${globalIndex}" draggable="true">

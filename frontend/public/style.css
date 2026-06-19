@@ -1031,20 +1031,26 @@ body {
 }
 
 /* Add to video button inside gallery overlay */
-.add-to-vid-btn {
+.overlay-buttons {
+    display: flex;
+    gap: 0.5rem;
     margin-top: 0.5rem;
-    padding: 0.35rem 0.75rem;
+    width: 100%;
+}
+
+.add-to-vid-btn {
+    padding: 0.35rem 0.5rem;
     background: rgba(255, 55, 95, 0.15);
     border: 1px solid rgba(255, 55, 95, 0.35);
     color: #ffffff;
     font-family: var(--font-heading);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     border-radius: 8px;
     cursor: pointer;
-    width: 100%;
     text-align: center;
     transition: var(--transition-smooth);
+    flex: 1;
 }
 
 .add-to-vid-btn:hover {
