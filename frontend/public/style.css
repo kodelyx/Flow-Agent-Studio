@@ -826,6 +826,42 @@ body {
     display: block;
 }
 
+.media-download-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(240, 240, 242, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3a4b5c;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+}
+
+.media-download-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: scale(1.06);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+    color: #0071e3;
+}
+
+.media-download-btn:active {
+    transform: scale(0.94);
+    background: rgba(230, 230, 235, 0.95);
+}
+
 .gallery-item-footer {
     padding: 0.65rem;
     background: #ffffff;
