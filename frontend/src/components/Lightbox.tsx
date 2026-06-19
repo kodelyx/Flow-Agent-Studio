@@ -1,8 +1,8 @@
 export const Lightbox = () => {
   return (
     <div class="ios-modal" id="media-modal">
-      <span class="close-modal">&times;</span>
       <div class="ios-modal-content">
+        <span class="close-modal">&times;</span>
         <div id="modal-media-container"></div>
         <div class="ios-modal-footer">
           <p id="modal-prompt"></p>
