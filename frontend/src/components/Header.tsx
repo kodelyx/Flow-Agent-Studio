@@ -10,6 +10,13 @@ export const Header = () => {
         <span class="brand-title">Flow Agent <span>Studio</span></span>
       </div>
 
+      <div class="nav-center">
+        <div class="ios-segmented-control">
+          <button class="segment-btn active" data-tab="image">Image Generator</button>
+          <button class="segment-btn" data-tab="video">Video Generator</button>
+        </div>
+      </div>
+
       <div class="nav-right">
         <div class="credits-badge hide" id="credits-badge">
           <span>Credits: </span><span id="credits-count">?</span>

@@ -1,12 +1,6 @@
 export const Controls = () => {
   return (
     <section class="ios-card glass">
-      {/* iOS Segmented Control Tab */}
-      <div class="ios-segmented-control">
-        <button class="segment-btn active" data-tab="image">Image Generator</button>
-        <button class="segment-btn" data-tab="video">Video Generator</button>
-      </div>
-
       {/* Image Modality Panel */}
       <div class="panel-content active" id="panel-image">
         <div class="ios-input-group">

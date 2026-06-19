@@ -99,10 +99,10 @@ body {
 
 /* Header Section / Navbar (Mimics Zomato LeadFinder layout) */
 .ios-navbar {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 2rem;
+    padding: 0.5rem 2rem;
     border-radius: 100px;
     margin-bottom: 1.25rem;
     background: var(--bg-card);
@@ -115,6 +115,13 @@ body {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    justify-content: flex-start;
+}
+
+.nav-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .brand-logo {
@@ -164,6 +171,8 @@ body {
 .nav-right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
 }
 
 .status-badge {
@@ -252,22 +261,21 @@ body {
     display: flex;
     background: rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.02);
-    padding: 5px;
-    border-radius: 16px;
-    margin-bottom: 2rem;
+    padding: 4px;
+    border-radius: 100px;
+    margin-bottom: 0;
 }
 
 .segment-btn {
-    flex: 1;
-    padding: 0.75rem;
+    padding: 0.5rem 1.25rem;
     background: none;
     border: none;
     color: var(--text-secondary);
     font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
-    border-radius: 12px;
+    border-radius: 100px;
     transition: var(--transition-smooth);
 }
 
