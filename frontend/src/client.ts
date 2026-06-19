@@ -1209,6 +1209,11 @@ if (btnHistoryClear) {
         try {
             const response = await fetch(`${API_BASE}/v1/history`, { method: 'DELETE' });
             if (response.ok) {
+                // Clear the canvas assets from local memory and localStorage
+                assets = [];
+                localStorage.setItem('canvasAssets', JSON.stringify(assets));
+                updateGallery();
+                
                 await loadHistory();
                 showToast("All generation history and files cleared!", "success");
             } else {
@@ -1388,6 +1393,19 @@ async function loadHistory() {
                         if (card) {
                             card.remove();
                         }
+                        
+                        // Also remove from canvas assets if present
+                        const initialLen = assets.length;
+                        assets = assets.filter(asset => {
+                            const parts = asset.url.split('/');
+                            const assetFilename = parts[parts.length - 1];
+                            return assetFilename !== filename;
+                        });
+                        if (assets.length !== initialLen) {
+                            localStorage.setItem('canvasAssets', JSON.stringify(assets));
+                            updateGallery();
+                        }
+
                         showToast("Asset deleted successfully!", "success");
                         // Check if grid is now empty
                         const remainingCards = historyViewItems.querySelectorAll('.history-card');
