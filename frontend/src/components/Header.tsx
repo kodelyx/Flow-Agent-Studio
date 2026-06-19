@@ -3,7 +3,7 @@ export const Header = () => {
     <header class="ios-navbar glass">
       <div class="nav-left">
         <div class="brand-logo">
-          <img src="/static/public/logo.png" alt="Flow Agent Studio Logo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;" />
+          <img src="/static/public/logo.png" alt="Flow Agent Studio Logo" />
         </div>
         <span class="brand-title">Flow Agent <span>Studio</span></span>
       </div>
