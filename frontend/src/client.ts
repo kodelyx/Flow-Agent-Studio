@@ -626,6 +626,12 @@ if (btnGenerateImg) {
         const loadingMsg = selectedImageReferences.length > 0
             ? `Generating images consistent with ${selectedImageReferences.length} reference image(s)...`
             : 'Sending request to Flow Agent Bridge...';
+        
+        // Clear previous image assets from canvas
+        assets = assets.filter(asset => asset.type !== 'image');
+        localStorage.setItem('canvasAssets', JSON.stringify(assets));
+        updateGallery();
+
         setCanvasLoading(true, 'Creating Images...', loadingMsg, 'image');
 
         try {
@@ -699,6 +705,11 @@ if (btnGenerateVid) {
                 loadingMsg = `Generating video consistent with ${selectedReferences.length} reference image(s)...`;
             }
         }
+
+        // Clear previous video assets from canvas
+        assets = assets.filter(asset => asset.type !== 'video');
+        localStorage.setItem('canvasAssets', JSON.stringify(assets));
+        updateGallery();
 
         setCanvasLoading(true, 'Generating Video...', loadingMsg, 'video');
 
