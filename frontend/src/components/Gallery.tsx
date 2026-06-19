@@ -8,7 +8,6 @@ export const Gallery = () => {
         
         <div class="gallery-header-right">
           <span class="ios-badge" id="asset-count">0</span>
-          <button id="btn-clear-canvas" class="history-btn" style="margin: 0;" title="Clear Canvas">Clear</button>
         </div>
       </div>
 
