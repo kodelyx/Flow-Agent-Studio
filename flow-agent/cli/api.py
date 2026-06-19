@@ -201,16 +201,43 @@ async def openai_generate_image(req: ImageGenerationRequest):
                 os.remove(temp_img_path)
             raise HTTPException(status_code=500, detail=f"Image upload error: {str(e)}")
 
-    # Trigger Flow generation
+    # Trigger Flow generation chunk by chunk in parallel (Flow maximum count per request is 4)
+    total_count = req.n
+    chunks = []
+    while total_count > 0:
+        chunk_size = min(4, total_count)
+        chunks.append(chunk_size)
+        total_count -= chunk_size
+
     try:
-        results = await generate_image(
-            active_bridge, 
-            prompt=req.prompt, 
-            aspect=aspect, 
-            project_id=project_id, 
-            count=req.n,
-            ref_media_ids=ref_media_ids
-        )
+        tasks = []
+        for chunk_size in chunks:
+            tasks.append(
+                generate_image(
+                    active_bridge, 
+                    prompt=req.prompt, 
+                    aspect=aspect, 
+                    project_id=project_id, 
+                    count=chunk_size,
+                    ref_media_ids=ref_media_ids
+                )
+            )
+        
+        # Run requests concurrently using asyncio.gather
+        results_lists = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        results = []
+        first_error = None
+        for res in results_lists:
+            if isinstance(res, Exception):
+                first_error = res
+                log.error(f"Error in parallel generate_image chunk: {res}")
+            elif isinstance(res, list):
+                results.extend(res)
+                
+        # If all requests failed, raise the exception
+        if not results and first_error:
+            raise first_error
     except Exception as e:
         if temp_img_path and os.path.exists(temp_img_path):
             try:

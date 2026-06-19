@@ -41,6 +41,9 @@ export const Controls = () => {
               <option value="2">2 Images</option>
               <option value="3">3 Images</option>
               <option value="4" selected={true}>4 Images</option>
+              <option value="8">8 Images</option>
+              <option value="12">12 Images</option>
+              <option value="20">20 Images</option>
             </select>
           </div>
         </div>
