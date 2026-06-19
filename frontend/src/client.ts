@@ -840,8 +840,8 @@ function updateGallery() {
         if (asset.type === 'image') {
             const addBtnHtml = asset.media_id
                 ? `
-                  <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Add Image Ref</button>
-                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
+                  <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Img Ref</button>
+                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Vid Ref</button>
                   `
                 : '';
             return `
@@ -861,7 +861,7 @@ function updateGallery() {
         } else {
             const addBtnHtml = asset.media_id
                 ? `
-                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
+                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Vid Ref</button>
                   `
                 : '';
             const autoplayAttr = autoplayVideos ? 'autoplay' : '';
