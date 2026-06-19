@@ -51,6 +51,6 @@ npm run dev # Launches Vite/Hono app at http://localhost:3000
 ## 🎨 Premium UI Features
 
 - **iOS 18 Light Glassmorphism**: Clean layout with frosted cards, light background, and crimson red accents.
-- **Persistent Card Footers**: Prompts and action buttons (`Img Ref`, `Vid Ref`, `Copy Prompt`) sit directly below media assets for easy access.
+- **Persistent Card Footers**: Action buttons (`Img Ref`, `Vid Ref`, `Copy`) sit directly below media assets for easy access (prompt text is hidden to keep the layout clean).
 - **Auto-Clearing Canvas**: Active workspace auto-clears on new request triggers, preserving full history under the persistent History tab.
 - **Background Generation**: Image and video generator tabs operate concurrently without blocking the client.

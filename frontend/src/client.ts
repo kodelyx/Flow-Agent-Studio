@@ -850,10 +850,9 @@ function updateGallery() {
                         <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
                     </div>
                     <div class="gallery-item-footer">
-                        <p class="overlay-prompt" title="${escapeHtml(asset.prompt)}">${escapeHtml(asset.prompt)}</p>
                         <div class="overlay-buttons">
                             ${addBtnHtml}
-                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy Prompt</button>
+                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
                         </div>
                     </div>
                 </div>
@@ -872,10 +871,9 @@ function updateGallery() {
                         ${autoplayVideos ? '' : '<div class="play-badge">▶</div>'}
                     </div>
                     <div class="gallery-item-footer">
-                        <p class="overlay-prompt" title="${escapeHtml(asset.prompt)}">${escapeHtml(asset.prompt)}</p>
                         <div class="overlay-buttons">
                             ${addBtnHtml}
-                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy Prompt</button>
+                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy</button>
                         </div>
                     </div>
                 </div>
