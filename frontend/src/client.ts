@@ -85,14 +85,7 @@ let selectedImageReferences: ReferenceImage[] = [];
 let activeLightboxAsset: GeneratedAsset | null = null;
 let activeImageUploadsCount = 0;
 let activeVideoUploadsCount = 0;
-let autoplayVideos = false;
-
-// Dynamic Gallery Actions Elements
-const btnAutoplayVids = document.getElementById('btn-autoplay-vids') as HTMLButtonElement | null;
-const btnAddAllImg = document.getElementById('btn-add-all-img') as HTMLButtonElement | null;
-const btnDownloadAllImg = document.getElementById('btn-download-all-img') as HTMLButtonElement | null;
-const btnAddAllVid = document.getElementById('btn-add-all-vid') as HTMLButtonElement | null;
-const btnDownloadAllVid = document.getElementById('btn-download-all-vid') as HTMLButtonElement | null;
+const autoplayVideos = false;
 
 let isGeneratingImg = false;
 let isGeneratingVid = false;
@@ -616,127 +609,6 @@ if (btnClearCanvas) {
         localStorage.setItem('canvasAssets', JSON.stringify(assets));
         updateGallery();
         showToast('Canvas cleared successfully!', 'success');
-    });
-}
-
-// Helper to download files asynchronously as blobs (forces browser downloads instead of opening in a new tab)
-async function triggerDownload(url: string, defaultName: string) {
-    try {
-        const res = await fetch(url);
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = defaultName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-    } catch (e) {
-        window.open(url, '_blank');
-    }
-}
-
-if (btnAutoplayVids) {
-    btnAutoplayVids.addEventListener('click', () => {
-        autoplayVideos = !autoplayVideos;
-        if (autoplayVideos) {
-            btnAutoplayVids.textContent = '🎬 Auto-play: On';
-            btnAutoplayVids.classList.add('active');
-            document.querySelectorAll<HTMLVideoElement>('#gallery-grid video').forEach(video => {
-                video.play().catch(() => {});
-            });
-        } else {
-            btnAutoplayVids.textContent = '🎬 Auto-play: Off';
-            btnAutoplayVids.classList.remove('active');
-            document.querySelectorAll<HTMLVideoElement>('#gallery-grid video').forEach(video => {
-                video.pause();
-            });
-        }
-    });
-}
-
-if (btnAddAllImg) {
-    btnAddAllImg.addEventListener('click', () => {
-        const imageAssets = assets.filter(a => a.type === 'image' && a.media_id);
-        if (imageAssets.length === 0) {
-            showToast("No images on the canvas to add.", "info");
-            return;
-        }
-        let addedCount = 0;
-        imageAssets.forEach(asset => {
-            if (asset.media_id && !selectedImageReferences.some(ref => ref.media_id === asset.media_id)) {
-                if (selectedImageReferences.length < 10) {
-                    selectedImageReferences.push({ url: asset.url, media_id: asset.media_id });
-                    addedCount++;
-                }
-            }
-        });
-        if (addedCount > 0) {
-            updateImageReferencesUI();
-            showToast(`Added ${addedCount} images to references!`, "success");
-        } else {
-            showToast("All canvas images are already in references.", "info");
-        }
-    });
-}
-
-if (btnAddAllVid) {
-    btnAddAllVid.addEventListener('click', () => {
-        const videoAssets = assets.filter(a => a.type === 'video' && a.media_id);
-        if (videoAssets.length === 0) {
-            showToast("No videos on the canvas to add.", "info");
-            return;
-        }
-        let addedCount = 0;
-        videoAssets.forEach(asset => {
-            if (asset.media_id && !selectedReferences.some(ref => ref.media_id === asset.media_id)) {
-                if (selectedReferences.length < 10) {
-                    selectedReferences.push({ url: asset.url, media_id: asset.media_id });
-                    addedCount++;
-                }
-            }
-        });
-        if (addedCount > 0) {
-            updateReferencesUI();
-            showToast(`Added ${addedCount} videos to references!`, "success");
-        } else {
-            showToast("All canvas videos are already in references.", "info");
-        }
-    });
-}
-
-if (btnDownloadAllImg) {
-    btnDownloadAllImg.addEventListener('click', async () => {
-        const imageAssets = assets.filter(a => a.type === 'image');
-        if (imageAssets.length === 0) {
-            showToast("No images to download.", "info");
-            return;
-        }
-        showToast("Starting download for all images...", "info");
-        for (let i = 0; i < imageAssets.length; i++) {
-            const asset = imageAssets[i];
-            const filename = asset.url.split('/').pop() || `image_${i + 1}.png`;
-            await triggerDownload(asset.url, filename);
-            await new Promise(r => setTimeout(r, 300));
-        }
-    });
-}
-
-if (btnDownloadAllVid) {
-    btnDownloadAllVid.addEventListener('click', async () => {
-        const videoAssets = assets.filter(a => a.type === 'video');
-        if (videoAssets.length === 0) {
-            showToast("No videos to download.", "info");
-            return;
-        }
-        showToast("Starting download for all videos...", "info");
-        for (let i = 0; i < videoAssets.length; i++) {
-            const asset = videoAssets[i];
-            const filename = asset.url.split('/').pop() || `video_${i + 1}.mp4`;
-            await triggerDownload(asset.url, filename);
-            await new Promise(r => setTimeout(r, 300));
-        }
     });
 }
 

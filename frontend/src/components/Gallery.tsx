@@ -7,20 +7,7 @@ export const Gallery = () => {
         </div>
         
         <div class="gallery-header-right">
-          {/* Image Modality Actions */}
-          <div id="gallery-image-actions" class="gallery-context-actions">
-            <button id="btn-add-all-img" class="context-action-btn" title="Add all images to references">✨ Add All to Ref</button>
-            <button id="btn-download-all-img" class="context-action-btn" title="Download all images">⬇️ Download All</button>
-          </div>
-          
-          {/* Video Modality Actions */}
-          <div id="gallery-video-actions" class="gallery-context-actions hide">
-            <button id="btn-autoplay-vids" class="context-action-btn" title="Toggle Auto-play Videos">🎬 Auto-play: Off</button>
-            <button id="btn-add-all-vid" class="context-action-btn" title="Add all videos to references">✨ Add All to Ref</button>
-            <button id="btn-download-all-vid" class="context-action-btn" title="Download all videos">⬇️ Download All</button>
-          </div>
-          
-          <button id="btn-clear-canvas" class="canvas-clear-btn" title="Clear Canvas">🗑️</button>
+          <button id="btn-clear-canvas" class="history-btn" style="margin: 0;" title="Clear Canvas">Clear</button>
         </div>
       </div>
 
