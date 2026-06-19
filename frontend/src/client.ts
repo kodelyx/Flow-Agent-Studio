@@ -670,43 +670,79 @@ if (btnGenerateImg) {
             const bodyPayload: any = {
                 prompt: prompt,
                 size: imgSize.value,
-                n: parseInt(imgCount.value),
                 response_format: 'url'
             };
             if (selectedImageReferences.length > 0) {
                 bodyPayload.ref_media_ids = selectedImageReferences.map(ref => ref.media_id);
             }
 
-            const response = await fetch(`${API_BASE}/v1/images/generations`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bodyPayload)
+            const totalCount = parseInt(imgCount.value);
+            const chunks: number[] = [];
+            let remaining = totalCount;
+            while (remaining > 0) {
+                const chunk = Math.min(4, remaining);
+                chunks.push(chunk);
+                remaining -= chunk;
+            }
+
+            let activeRequests = chunks.length;
+            let hasSucceededAny = false;
+
+            const runChunk = async (count: number) => {
+                try {
+                    const chunkPayload = {
+                        ...bodyPayload,
+                        n: count
+                    };
+
+                    const response = await fetch(`${API_BASE}/v1/images/generations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(chunkPayload)
+                    });
+
+                    const result: ImageResponse = await response.json();
+                    if (response.ok && result.data) {
+                        result.data.forEach(item => {
+                            addAsset({
+                                type: 'image',
+                                url: item.url,
+                                prompt: prompt,
+                                media_id: item.media_id
+                            });
+                        });
+                        hasSucceededAny = true;
+                    } else {
+                        showToast(`Error: ${result.detail || 'Failed to generate images'}`, 'error');
+                    }
+                } catch (e) {
+                    console.error('Error generating chunk:', e);
+                    showToast('Failed to connect to generate chunk.', 'error');
+                } finally {
+                    activeRequests--;
+                    if (activeRequests <= 0) {
+                        setButtonLoading(btnGenerateImg, false);
+                        setCanvasLoading(false, '', '', 'image');
+                        if (hasSucceededAny) {
+                            imgPrompt.value = '';
+                            localStorage.removeItem('imgPrompt');
+                            selectedImageReferences = [];
+                            updateImageReferencesUI();
+                            showToast("Images generated successfully!", "success");
+                        }
+                    }
+                }
+            };
+
+            chunks.forEach((chunkSize, index) => {
+                setTimeout(() => {
+                    runChunk(chunkSize);
+                }, index * 3000);
             });
 
-            const result: ImageResponse = await response.json();
-            if (response.ok && result.data) {
-                result.data.forEach(item => {
-                    addAsset({
-                        type: 'image',
-                        url: item.url,
-                        prompt: prompt,
-                        media_id: item.media_id
-                    });
-                });
-                imgPrompt.value = '';
-                localStorage.removeItem('imgPrompt');
-
-                // Clear references list
-                selectedImageReferences = [];
-                updateImageReferencesUI();
-                showToast("Images generated successfully!", "success");
-            } else {
-                showToast(`Error: ${result.detail || 'Failed to generate images'}`, 'error');
-            }
         } catch (e) {
             console.error(e);
             showToast('Could not connect to the Flow Agent server. Make sure it is running.', 'error');
-        } finally {
             setButtonLoading(btnGenerateImg, false);
             setCanvasLoading(false, '', '', 'image');
         }
