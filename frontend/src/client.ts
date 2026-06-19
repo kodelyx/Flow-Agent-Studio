@@ -439,8 +439,8 @@ function updateImageReferencesUI() {
             </div>
         `;
     }).join('') + `
-        <div class="ref-thumb-add-more" style="width: 58px; height: 58px; border-radius: 12px; border: 2px dashed rgba(255, 55, 95, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--accent-red); cursor: pointer; background: rgba(255, 55, 95, 0.05); font-weight: bold;">
-            +
+        <div class="ref-thumb-add-more">
+            <span class="add-more-plus">+</span>
         </div>
     `;
 
@@ -558,8 +558,8 @@ function updateReferencesUI() {
             </div>
         `;
     }).join('') + `
-        <div class="ref-thumb-add-more" style="width: 58px; height: 58px; border-radius: 12px; border: 2px dashed rgba(255, 55, 95, 0.4); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--accent-red); cursor: pointer; background: rgba(255, 55, 95, 0.05); font-weight: bold;">
-            +
+        <div class="ref-thumb-add-more">
+            <span class="add-more-plus">+</span>
         </div>
     `;
 

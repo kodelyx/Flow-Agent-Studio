@@ -958,13 +958,13 @@ body {
     border-color: #10b981 !important;
 }
 
-/* Reference Images thumbnails and selectors styling */
 .ref-images-thumbnails {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     padding: 0.5rem;
     justify-content: center;
+    align-items: center;
 }
 
 .ref-thumb {
@@ -985,6 +985,9 @@ body {
 }
 
 .ref-thumb-add-more {
+    width: 85px;
+    height: 85px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
