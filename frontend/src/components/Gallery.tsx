@@ -14,7 +14,6 @@ export const Gallery = () => {
 
       {/* Empty State */}
       <div class="ios-empty" id="empty-state">
-        <div class="empty-icon">🔴</div>
         <h3>Studio Idle</h3>
       </div>
 
