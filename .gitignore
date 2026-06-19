@@ -12,3 +12,10 @@ frontend/dist/
 # Sensitive info files
 Cloudflare Api
 Cloudflare Api.txt
+
+# Generated / Media files
+*.xlsx
+*.csv
+*.mp4
+*.zip
+*.tar.gz
