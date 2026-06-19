@@ -708,34 +708,40 @@
       const globalIndex = assets.indexOf(asset);
       if (asset.type === "image") {
         const addBtnHtml = asset.media_id ? `
-                  <div class="overlay-buttons">
-                      <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Add Image Ref</button>
-                      <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
-                  </div>
+                  <button class="add-to-vid-btn add-to-img-ref-btn" data-index="${globalIndex}" title="Add reference to Image Generator">Add Image Ref</button>
+                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
                   ` : "";
         return `
                 <div class="gallery-item" data-index="${globalIndex}" draggable="true">
-                    <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
-                    <div class="item-overlay">
-                        <p class="overlay-prompt">${escapeHtml(asset.prompt)}</p>
-                        ${addBtnHtml}
+                    <div class="gallery-media-wrapper">
+                        <img src="${asset.url}" alt="${escapeHtml(asset.prompt)}" loading="lazy">
+                    </div>
+                    <div class="gallery-item-footer">
+                        <p class="overlay-prompt" title="${escapeHtml(asset.prompt)}">${escapeHtml(asset.prompt)}</p>
+                        <div class="overlay-buttons">
+                            ${addBtnHtml}
+                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy Prompt</button>
+                        </div>
                     </div>
                 </div>
             `;
       } else {
         const addBtnHtml = asset.media_id ? `
-                  <div class="overlay-buttons">
-                      <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
-                  </div>
+                  <button class="add-to-vid-btn add-to-vid-ref-btn" data-index="${globalIndex}" title="Add reference to Video Generator">Add Video Ref</button>
                   ` : "";
         const autoplayAttr = autoplayVideos ? "autoplay" : "";
         return `
                 <div class="gallery-item" data-index="${globalIndex}" draggable="true">
-                    <video src="${asset.url}" muted loop ${autoplayAttr}></video>
-                    ${autoplayVideos ? "" : '<div class="play-badge">\u25B6</div>'}
-                    <div class="item-overlay">
-                        <p class="overlay-prompt">${escapeHtml(asset.prompt)}</p>
-                        ${addBtnHtml}
+                    <div class="gallery-media-wrapper">
+                        <video src="${asset.url}" muted loop ${autoplayAttr}></video>
+                        ${autoplayVideos ? "" : '<div class="play-badge">\u25B6</div>'}
+                    </div>
+                    <div class="gallery-item-footer">
+                        <p class="overlay-prompt" title="${escapeHtml(asset.prompt)}">${escapeHtml(asset.prompt)}</p>
+                        <div class="overlay-buttons">
+                            ${addBtnHtml}
+                            <button class="add-to-vid-btn copy-prompt-btn" data-prompt="${escapeHtml(asset.prompt)}" title="Copy Prompt">Copy Prompt</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -802,6 +808,16 @@
           if (asset && asset.media_id) {
             addReference(asset.url, asset.media_id);
           }
+        }
+      });
+    });
+    galleryGrid.querySelectorAll(".copy-prompt-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const prompt = btn.getAttribute("data-prompt") || "";
+        if (prompt) {
+          navigator.clipboard.writeText(prompt);
+          showToast("Prompt copied to clipboard!", "success");
         }
       });
     });

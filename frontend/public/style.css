@@ -741,46 +741,50 @@ body {
     cursor: pointer;
     transition: var(--transition-smooth);
     position: relative;
-    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.02);
 }
 
 .gallery-item:hover {
-    transform: translateY(-5px) scale(1.02);
+    transform: translateY(-5px) scale(1.01);
     border-color: rgba(255, 55, 95, 0.35);
     box-shadow: 
         0 15px 30px rgba(255, 55, 95, 0.08),
         0 8px 16px rgba(0, 0, 0, 0.03);
 }
 
-.gallery-item img, 
-.gallery-item video {
+.gallery-media-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+}
+
+.gallery-media-wrapper img, 
+.gallery-media-wrapper video {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
 }
 
-.item-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: 1.25rem;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85) 75%);
-    opacity: 0;
-    transition: var(--transition-smooth);
-}
-
-.gallery-item:hover .item-overlay {
-    opacity: 1;
+.gallery-item-footer {
+    padding: 0.85rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: #ffffff;
+    border-top: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 .overlay-prompt {
     font-size: 0.8rem;
-    color: #fff;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-weight: 600;
 }
 
 /* Play Badge */
@@ -1034,29 +1038,45 @@ body {
 .overlay-buttons {
     display: flex;
     gap: 0.5rem;
-    margin-top: 0.5rem;
     width: 100%;
 }
 
 .add-to-vid-btn {
-    padding: 0.35rem 0.5rem;
-    background: rgba(255, 55, 95, 0.15);
-    border: 1px solid rgba(255, 55, 95, 0.35);
-    color: #ffffff;
+    padding: 0.45rem 0.5rem;
+    background: rgba(255, 55, 95, 0.06);
+    border: 1px solid rgba(255, 55, 95, 0.18);
+    color: var(--accent-red);
     font-family: var(--font-heading);
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 700;
     border-radius: 8px;
     cursor: pointer;
     text-align: center;
     transition: var(--transition-smooth);
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .add-to-vid-btn:hover {
     background: var(--accent-red);
     border-color: var(--accent-red);
+    color: #ffffff;
     box-shadow: 0 4px 12px rgba(255, 55, 95, 0.25);
+}
+
+.copy-prompt-btn {
+    background: rgba(71, 85, 105, 0.06);
+    border: 1px solid rgba(71, 85, 105, 0.18);
+    color: var(--text-secondary);
+}
+
+.copy-prompt-btn:hover {
+    background: var(--text-secondary);
+    border-color: var(--text-secondary);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.2);
 }
 
 /* Lightbox Modal Button Action Group */
