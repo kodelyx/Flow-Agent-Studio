@@ -685,7 +685,6 @@ if (btnGenerateImg) {
                 remaining -= chunk;
             }
 
-            let activeRequests = chunks.length;
             let hasSucceededAny = false;
 
             const runChunk = async (count: number) => {
@@ -718,27 +717,27 @@ if (btnGenerateImg) {
                 } catch (e) {
                     console.error('Error generating chunk:', e);
                     showToast('Failed to connect to generate chunk.', 'error');
-                } finally {
-                    activeRequests--;
-                    if (activeRequests <= 0) {
-                        setButtonLoading(btnGenerateImg, false);
-                        setCanvasLoading(false, '', '', 'image');
-                        if (hasSucceededAny) {
-                            imgPrompt.value = '';
-                            localStorage.removeItem('imgPrompt');
-                            selectedImageReferences = [];
-                            updateImageReferencesUI();
-                            showToast("Images generated successfully!", "success");
-                        }
-                    }
                 }
             };
 
-            chunks.forEach((chunkSize, index) => {
-                setTimeout(() => {
-                    runChunk(chunkSize);
-                }, index * 3000);
-            });
+            // Process chunks sequentially: wait for previous to complete (Status ✓ done) before sending next
+            (async () => {
+                try {
+                    for (const chunkSize of chunks) {
+                        await runChunk(chunkSize);
+                    }
+                } finally {
+                    setButtonLoading(btnGenerateImg, false);
+                    setCanvasLoading(false, '', '', 'image');
+                    if (hasSucceededAny) {
+                        imgPrompt.value = '';
+                        localStorage.removeItem('imgPrompt');
+                        selectedImageReferences = [];
+                        updateImageReferencesUI();
+                        showToast("Images generated successfully!", "success");
+                    }
+                }
+            })();
 
         } catch (e) {
             console.error(e);
