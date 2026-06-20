@@ -17,7 +17,7 @@ import urllib.request
 from typing import List, Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Security, Depends, Query
+from fastapi import FastAPI, HTTPException, Security, Depends, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from omniflash import ExtensionBridge, DEFAULT_PROJECT
 from omniflash.generators.t2i import generate_image, download_image
+from omniflash import storage, db
 
 # Setup logging
 log = logging.getLogger("omniflash.openai_api")
@@ -38,6 +39,37 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(ROOT_DIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Public base for serving local files when R2 is not configured (the HF Space
+# publishes cli/api.py on its app port, so /download is publicly reachable).
+PUBLIC_BASE_URL = os.environ.get(
+    "PUBLIC_BASE_URL", "https://flow1254-flow-backend-api.hf.space"
+).rstrip("/")
+
+
+def public_url(filename: str) -> str:
+    return f"{PUBLIC_BASE_URL}/download/{filename}"
+
+
+def _content_type(filename: str) -> str:
+    return "video/mp4" if filename.endswith(".mp4") else "image/png"
+
+
+async def publish(filename: str, out_path: str):
+    """Make a generated file web-accessible.
+
+    Uploads to Cloudflare R2 when configured (returns the permanent R2 URL and
+    its object key); otherwise returns the local /download URL and a None key.
+    """
+    if storage.is_enabled():
+        try:
+            url = await asyncio.to_thread(
+                storage.upload, out_path, filename, _content_type(filename)
+            )
+            return url, filename
+        except Exception:
+            log.exception("R2 upload failed; falling back to local URL")
+    return public_url(filename), None
+
 # ExtensionBridge lifecycle
 bridge: Optional[ExtensionBridge] = None
 
@@ -47,7 +79,17 @@ async def lifespan(app: FastAPI):
     log.info("🚀 Starting Flow Agent Extension Bridge (OpenAI Interface)...")
     bridge = ExtensionBridge()
     await bridge.start()
-    
+
+    # Ensure the media metadata table exists (no-op if DATABASE_URL unset)
+    if db.is_enabled():
+        try:
+            await asyncio.to_thread(db.init)
+            log.info("🗄️  Postgres media store enabled")
+        except Exception:
+            log.exception("DB init failed; history will fall back to disk")
+    if storage.is_enabled():
+        log.info("☁️  R2 media storage enabled")
+
     # Run extension connection in background
     asyncio.create_task(bridge.wait_for_extension(timeout=30))
     
@@ -149,6 +191,27 @@ class VideoGenerationRequest(BaseModel):
     ref_media_ids: Optional[List[str]] = Field(None, description="Optional reference image media IDs (up to 10)")
     start_media_id: Optional[str] = Field(None, description="Optional pre-uploaded start image or video media ID")
     is_video: Optional[bool] = Field(False, description="True if the pre-uploaded reference is a video")
+
+
+# Extension WebSocket and Callback Endpoints
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    log.info("🔌 Extension connecting via FastAPI WebSocket...")
+    global bridge
+    if bridge:
+        await bridge.handle_fastapi_ws(websocket)
+    else:
+        log.error("❌ Bridge not initialized")
+        await websocket.close()
+
+@app.post("/api/ext/callback")
+async def http_callback(body: dict):
+    global bridge
+    if bridge:
+        success = bridge.handle_http_callback(body)
+        return {"ok": success}
+    return {"ok": False}
 
 
 # OpenAI Endpoints
@@ -276,14 +339,12 @@ async def openai_generate_image(req: ImageGenerationRequest):
                 b64_data = base64.b64encode(image_file.read()).decode("utf-8")
                 data_outputs.append({"b64_json": b64_data})
         else:
-            host = os.environ.get("OPENAI_API_HOST", "127.0.0.1")
-            port = os.environ.get("OPENAI_API_PORT", "8001")
-            download_url = f"http://{host}:{port}/download/{filename}"
+            served_url, r2_key = await publish(filename, out_path)
             data_outputs.append({
-                "url": download_url,
+                "url": served_url,
                 "media_id": r.get("media_id")
             })
-            append_to_history("image", download_url, req.prompt, r.get("media_id"))
+            await append_to_history("image", served_url, req.prompt, r.get("media_id"), r2_key)
 
     return {
         "created": timestamp,
@@ -394,18 +455,16 @@ async def openai_generate_video(req: VideoGenerationRequest):
             log.error(f"Download failed for media_id: {media_id}")
             return None
 
-        host = os.environ.get("OPENAI_API_HOST", "127.0.0.1")
-        port = os.environ.get("OPENAI_API_PORT", "8001")
-        download_url = f"http://{host}:{port}/download/{filename}"
-        return {"url": download_url, "media_id": media_id}
+        served_url, r2_key = await publish(filename, out_path)
+        return {"url": served_url, "media_id": media_id, "r2_key": r2_key}
 
     tasks = [poll_and_download(mid, i) for i, mid in enumerate(media_ids)]
     results = await asyncio.gather(*tasks)
 
     for r in results:
         if r:
-            data_outputs.append(r)
-            append_to_history("video", r["url"], req.prompt, r.get("media_id"))
+            data_outputs.append({"url": r["url"], "media_id": r.get("media_id")})
+            await append_to_history("video", r["url"], req.prompt, r.get("media_id"), r.get("r2_key"))
 
     if not data_outputs:
         raise HTTPException(status_code=500, detail="Failed to complete video generations or downloads.")
@@ -495,7 +554,7 @@ async def chat_completions(req: ChatCompletionRequest):
             if not await download_video(active_bridge, media_id, out_path):
                 raise HTTPException(status_code=500, detail="Failed to download video file.")
                 
-            download_url = f"http://{req.model if req.model != 'flow-agent' else '127.0.0.1'}:8001/download/{filename}"
+            download_url, _ = await publish(filename, out_path)
             markdown_response = f"🎬 **Video Generated successfully!**\n\n[Download / Play Video]({download_url})\n\n"
         else:
             log.info(f"🖼️ Custom Chat Prompt: Image Generation -> '{prompt}'")
@@ -511,7 +570,7 @@ async def chat_completions(req: ChatCompletionRequest):
             if not await download_image(active_bridge, url, out_path):
                 raise HTTPException(status_code=500, detail="Failed to download image file.")
                 
-            download_url = f"http://127.0.0.1:8001/download/{filename}"
+            download_url, _ = await publish(filename, out_path)
             markdown_response = f"🖼️ **Image Generated successfully!**\n\n![Generated Image]({download_url})\n\n"
 
     # Support streaming mode
@@ -583,14 +642,18 @@ async def upload_file_endpoint(req: UploadRequest):
             if not media_id:
                 raise HTTPException(status_code=500, detail="Failed to upload image reference to Google Flow.")
         
-        # Save file to history/output so we can serve its local URL
-        host = os.environ.get("OPENAI_API_HOST", "127.0.0.1")
-        port = os.environ.get("OPENAI_API_PORT", "8001")
-        download_url = f"http://{host}:{port}/download/{temp_name}"
-        
+        # Make the file web-accessible (R2 if configured, else local /download)
+        download_url, r2_key = await publish(temp_name, temp_path)
+        # If it went to R2, the local copy is no longer needed for serving
+        if r2_key and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
         # Add to history
-        append_to_history("video" if is_video_input else "image", download_url, "Uploaded reference file", media_id)
-        
+        await append_to_history("video" if is_video_input else "image", download_url, "Uploaded reference file", media_id, r2_key)
+
         return {
             "media_id": media_id,
             "url": download_url
@@ -606,7 +669,18 @@ async def upload_file_endpoint(req: UploadRequest):
 
 
 # History Management Helper
-def append_to_history(type_str: str, url: str, prompt: str, media_id: str = None):
+async def append_to_history(type_str: str, url: str, prompt: str, media_id: str = None, r2_key: str = None):
+    """Record a generation. Uses Postgres when configured, else history.json."""
+    if db.is_enabled():
+        try:
+            await asyncio.to_thread(db.insert, type_str, url, prompt, media_id, r2_key)
+            return
+        except Exception:
+            log.exception("DB insert failed; falling back to history.json")
+    _append_history_file(type_str, url, prompt, media_id)
+
+
+def _append_history_file(type_str: str, url: str, prompt: str, media_id: str = None):
     history_file = os.path.join(OUTPUT_DIR, "history.json")
     data = {"history": []}
     if os.path.exists(history_file):
@@ -634,6 +708,16 @@ def append_to_history(type_str: str, url: str, prompt: str, media_id: str = None
 @app.get("/v1/history")
 async def get_history():
     """Get previously generated images and videos."""
+    if db.is_enabled():
+        try:
+            rows = await asyncio.to_thread(db.list_media, 100)
+            return {"history": [
+                {k: row[k] for k in ("type", "url", "prompt", "timestamp", "media_id")}
+                for row in rows
+            ]}
+        except Exception:
+            log.exception("DB history fetch failed; falling back to history.json")
+
     history_file = os.path.join(OUTPUT_DIR, "history.json")
     if not os.path.exists(history_file):
         # Auto-detect existing generated files to populate initial history
@@ -644,13 +728,11 @@ async def get_history():
                 key=lambda f: os.path.getmtime(os.path.join(OUTPUT_DIR, f)),
                 reverse=True
             )
-            host = os.environ.get("OPENAI_API_HOST", "127.0.0.1")
-            port = os.environ.get("OPENAI_API_PORT", "8001")
             for filename in files[:100]:
                 file_path = os.path.join(OUTPUT_DIR, filename)
                 t = int(os.path.getmtime(file_path))
                 is_vid = filename.endswith(".mp4")
-                download_url = f"http://{host}:{port}/download/{filename}"
+                download_url = public_url(filename)
                 history_list.append({
                     "type": "video" if is_vid else "image",
                     "url": download_url,
@@ -675,6 +757,15 @@ async def get_history():
 @app.delete("/v1/history")
 async def delete_all_history():
     """Clear all generation history and delete files."""
+    # Clear DB rows + their R2 objects when configured
+    if db.is_enabled():
+        try:
+            keys = await asyncio.to_thread(db.delete_all)
+            for key in keys:
+                await asyncio.to_thread(storage.delete, key)
+        except Exception:
+            log.exception("DB/R2 clear failed")
+
     history_file = os.path.join(OUTPUT_DIR, "history.json")
     try:
         if os.path.exists(history_file):
@@ -694,8 +785,18 @@ async def delete_all_history():
 @app.delete("/v1/history/{filename}")
 async def delete_history_item(filename: str):
     """Delete a single history item and its corresponding file."""
+    # Remove matching DB rows + R2 objects when configured
+    if db.is_enabled():
+        try:
+            keys = await asyncio.to_thread(db.delete_by_url, filename)
+            for key in keys:
+                await asyncio.to_thread(storage.delete, key)
+            return {"status": "success", "deleted": len(keys)}
+        except Exception:
+            log.exception("DB/R2 delete failed; falling back to disk")
+
     history_file = os.path.join(OUTPUT_DIR, "history.json")
-    
+
     # Delete from disk
     file_path = os.path.join(OUTPUT_DIR, filename)
     if os.path.exists(file_path):

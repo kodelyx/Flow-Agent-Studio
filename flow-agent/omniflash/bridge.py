@@ -32,6 +32,60 @@ class ExtensionBridge:
         self._connected = asyncio.Event()
         self._loop = None
 
+    async def send_message(self, msg):
+        if not self._ws:
+            return
+        try:
+            if hasattr(self._ws, "send_text"):
+                await self._ws.send_text(json.dumps(msg))
+            else:
+                await self._ws.send(json.dumps(msg))
+        except Exception as e:
+            log.warning("Failed to send message: %s", e)
+
+    async def handle_fastapi_ws(self, ws):
+        self._ws = ws
+        log.info("✅ Extension connected via FastAPI WebSocket!")
+        self._connected.set()
+        
+        # Send callback config to extension
+        import os
+        space_id = os.environ.get("SPACE_ID")
+        if space_id:
+            author, name = space_id.split("/")
+            subdomain = f"{author.lower()}-{name.lower()}".replace("_", "-")
+            callback_url = f"https://{subdomain}.hf.space/api/ext/callback"
+        else:
+            callback_url = "http://127.0.0.1:3001/api/ext/callback"
+            
+        await self.send_message({
+            "type": "callback_config",
+            "secret": "flow_secret",
+            "callback_url": callback_url
+        })
+        
+        # Send current state + resend token if we have one
+        await self.send_message({
+            "type": "extension_ready",
+            "flowKeyPresent": self._flow_key is not None,
+        })
+        if self._flow_key:
+            await self.send_message({
+                "type": "token_captured",
+                "flowKey": self._flow_key
+            })
+            
+        try:
+            while True:
+                raw = await ws.receive_text()
+                data = json.loads(raw)
+                await self._handle_message(data)
+        except Exception as e:
+            log.warning("FastAPI WebSocket disconnected: %s", e)
+        finally:
+            self._ws = None
+            self._connected.clear()
+
     async def start(self):
         """Start WS server and HTTP callback server."""
         self._loop = asyncio.get_event_loop()
@@ -101,11 +155,11 @@ class ExtensionBridge:
             return
         try:
             log.info("📂 Requesting extension to open/refresh Flow tab...")
-            await self._ws.send(json.dumps({"method": "open_flow_tab"}))
+            await self.send_message({"method": "open_flow_tab"})
             # Wait for page to fully load before requesting token refresh
             await asyncio.sleep(8)
             log.info("🔄 Requesting token refresh from Flow tab...")
-            await self._ws.send(json.dumps({"method": "refresh_flow_tab"}))
+            await self.send_message({"method": "refresh_flow_tab"})
         except Exception as e:
             log.debug("Failed to request flow tab: %s", e)
 
@@ -117,10 +171,10 @@ class ExtensionBridge:
             req_id = str(uuid.uuid4())
             future = self._loop.create_future()
             self._pending[req_id] = future
-            await self._ws.send(json.dumps({
+            await self.send_message({
                 "id": req_id,
                 "method": "get_status",
-            }))
+            })
             result = await asyncio.wait_for(future, timeout=5)
             self._pending.pop(req_id, None)
             return result.get("result", {}).get("flowKeyPresent", False)
@@ -155,7 +209,7 @@ class ExtensionBridge:
 
         elif msg_type in ("pong", "ping"):
             if msg_type == "ping" and self._ws:
-                await self._ws.send(json.dumps({"type": "pong"}))
+                await self.send_message({"type": "pong"})
 
         else:
             req_id = data.get("id")
@@ -216,7 +270,7 @@ class ExtensionBridge:
                 "captchaAction": captcha_action,
             },
         }
-        await self._ws.send(json.dumps(msg))
+        await self.send_message(msg)
 
         try:
             result = await asyncio.wait_for(future, timeout=90)

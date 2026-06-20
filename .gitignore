@@ -1,0 +1,30 @@
+# Folders to ignore
+node_modules/
+venv/
+.env
+.DS_Store
+*.log
+flow-agent/output/
+flow-agent/venv/
+frontend/node_modules/
+frontend/dist/
+
+# Sensitive info files
+Cloudflare Api
+Cloudflare Api.txt
+token-Flow-Agent
+api
+redme
+hf-token
+neon-db
+api-key
+
+# Nested git data (flattened sub-projects)
+Browser-Agent/.git/
+
+# Generated / Media files
+*.xlsx
+*.csv
+*.mp4
+*.zip
+*.tar.gz

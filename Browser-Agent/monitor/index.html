@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chrome Navigator — GPT · Gemini · Flow</title>
+    <style>
+        :root { --accent: #007acc; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e; color: #d4d4d4; margin: 0; padding: 16px;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+        .dashboard { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; justify-content: center; }
+        .card { background: #252526; border-radius: 8px; padding: 8px 15px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 6px rgba(0,0,0,.3); }
+        .card-header { font-size: .72rem; color: #888; text-transform: uppercase; }
+        .card-value { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .progress-bg { background: #333; height: 6px; border-radius: 3px; overflow: hidden; width: 60px; }
+        .progress-fill { background: var(--accent); height: 100%; width: 0%; transition: width .5s ease; }
+
+        .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; justify-content: center; max-width: 95vw; }
+        .tab-btn {
+            background: #252526; color: #d4d4d4; border: 1px solid #333; border-radius: 8px;
+            padding: 7px 10px 7px 14px; font-size: .9rem; font-weight: 600; cursor: pointer;
+            transition: all .15s; display: inline-flex; align-items: center; gap: 8px; max-width: 220px;
+        }
+        .tab-btn:hover { border-color: var(--accent); }
+        .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 0 14px rgba(0,122,204,.55); }
+        .tab-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tab-close {
+            border: none; background: transparent; color: inherit; opacity: .6;
+            font-size: 1rem; line-height: 1; cursor: pointer; padding: 0 2px; border-radius: 4px;
+        }
+        .tab-close:hover { opacity: 1; background: rgba(255,255,255,.15); }
+        .tab-new { font-weight: 700; padding: 7px 13px; }
+
+        .navbar { display: flex; gap: 6px; margin-bottom: 12px; width: min(95vw, 900px); }
+        .nav-btn {
+            background: #252526; color: #d4d4d4; border: 1px solid #333; border-radius: 8px;
+            width: 38px; min-width: 38px; font-size: 1rem; cursor: pointer; transition: all .15s;
+        }
+        .nav-btn:hover { border-color: var(--accent); color: #fff; }
+        #address {
+            flex: 1; background: #1b1b1b; color: #e8e8e8; border: 1px solid #333; border-radius: 8px;
+            padding: 8px 12px; font-size: .9rem; font-family: ui-monospace, Menlo, Consolas, monospace;
+        }
+        #address:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px rgba(0,122,204,.4); }
+        .nav-go { width: auto; padding: 0 16px; font-weight: 600; }
+
+        #screen-container {
+            border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(0,122,204,.5);
+            background: #000; border-radius: 8px; overflow: hidden; line-height: 0; position: relative;
+        }
+        img { max-width: 95vw; max-height: 72vh; width: auto; height: auto; display: block; }
+        #hint { color: #777; font-size: .75rem; margin-top: 8px; }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <div class="card"><div class="card-header">Memory</div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <div class="card-value" id="memVal">...</div>
+                <div class="progress-bg"><div class="progress-fill" id="memBar"></div></div>
+            </div>
+        </div>
+        <div class="card"><div class="card-header">CPU Load</div><div class="card-value" id="cpuVal">...</div></div>
+        <div class="card"><div class="card-header">Uptime</div><div class="card-value" id="uptimeVal">...</div></div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div class="navbar">
+        <button class="nav-btn" id="backBtn" title="Back">←</button>
+        <button class="nav-btn" id="fwdBtn" title="Forward">→</button>
+        <button class="nav-btn" id="reloadBtn" title="Reload">⟳</button>
+        <input id="address" type="text" placeholder="Enter URL and press Enter…" spellcheck="false" autocomplete="off" />
+        <button class="nav-btn nav-go" id="goBtn">Go</button>
+    </div>
+
+    <div id="screen-container">
+        <img id="monitor" alt="Live Stream" />
+    </div>
+    <div id="hint">Click and type directly on the page · use the bar above to navigate the active tab anywhere.</div>
+
+    <script>
+        let activeTab = null;       // active CDP target id
+        let tabList = [];           // last /api/tabs payload
+        const img = document.getElementById('monitor');
+        const tabsEl = document.getElementById('tabs');
+        const address = document.getElementById('address');
+
+        const urlOf = id => (tabList.find(t => t.id === id) || {}).url || '';
+
+        // Build the tab strip from the server's live target list.
+        async function buildTabs() {
+            try {
+                const res = await fetch('/api/tabs');
+                tabList = await res.json();
+                if (!tabList.length) { tabsEl.innerHTML = ''; return; }
+                if (!tabList.some(t => t.id === activeTab)) activeTab = tabList[0].id;
+
+                tabsEl.innerHTML = '';
+                tabList.forEach(t => {
+                    const b = document.createElement('button');
+                    b.className = 'tab-btn' + (t.id === activeTab ? ' active' : '');
+                    b.dataset.key = t.id;
+                    b.title = t.url;
+
+                    const label = document.createElement('span');
+                    label.className = 'tab-label';
+                    label.textContent = t.title;
+                    b.appendChild(label);
+
+                    const x = document.createElement('button');
+                    x.className = 'tab-close';
+                    x.textContent = '×';
+                    x.title = 'Close tab';
+                    x.onclick = e => { e.stopPropagation(); closeTab(t.id); };
+                    b.appendChild(x);
+
+                    b.onclick = () => switchTab(t.id);
+                    tabsEl.appendChild(b);
+                });
+
+                // "+ new" button
+                const plus = document.createElement('button');
+                plus.className = 'tab-btn tab-new';
+                plus.textContent = '+';
+                plus.title = 'New tab';
+                plus.onclick = newTab;
+                tabsEl.appendChild(plus);
+
+                syncAddress();
+            } catch (e) { console.error(e); }
+        }
+
+        function syncAddress() {
+            if (document.activeElement !== address) address.value = urlOf(activeTab);
+        }
+
+        function switchTab(id) {
+            activeTab = id;
+            document.querySelectorAll('.tab-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.key === id));
+            syncAddress();
+            refreshImage();
+        }
+
+        async function post(path) {
+            try { await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); }
+            catch (e) { console.error(e); }
+        }
+
+        async function navigate() {
+            const url = address.value.trim();
+            if (!url || !activeTab) return;
+            try {
+                await fetch('/api/navigate?tab=' + activeTab, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                address.blur();
+                setTimeout(() => { buildTabs(); refreshImage(); }, 600);
+            } catch (e) { console.error(e); }
+        }
+
+        async function reload() { await post('/api/reload?tab=' + activeTab); setTimeout(refreshImage, 500); }
+        async function goBack() { await post('/api/back?tab=' + activeTab); setTimeout(() => { buildTabs(); refreshImage(); }, 500); }
+        async function goForward() { await post('/api/forward?tab=' + activeTab); setTimeout(() => { buildTabs(); refreshImage(); }, 500); }
+
+        async function newTab() {
+            const url = prompt('Open URL in a new tab:', 'https://');
+            if (url === null) return;
+            try {
+                const res = await fetch('/api/newtab', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url.trim() })
+                });
+                const { id } = await res.json();
+                if (id) activeTab = id;
+                await buildTabs();
+                refreshImage();
+            } catch (e) { console.error(e); }
+        }
+
+        async function closeTab(id) {
+            try {
+                await fetch('/api/closetab?tab=' + id, { method: 'POST' });
+                if (id === activeTab) activeTab = null;
+                await buildTabs();
+                refreshImage();
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('goBtn').onclick = navigate;
+        document.getElementById('reloadBtn').onclick = reload;
+        document.getElementById('backBtn').onclick = goBack;
+        document.getElementById('fwdBtn').onclick = goForward;
+        address.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); navigate(); } });
+
+        async function sendInput(data) {
+            if (!activeTab) return;
+            try {
+                await fetch('/api/input?tab=' + activeTab, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                setTimeout(refreshImage, 120);
+            } catch (e) { console.error(e); }
+        }
+
+        function coords(e) {
+            const rect = img.getBoundingClientRect();
+            return {
+                x: Math.round((e.clientX - rect.left) * (img.naturalWidth / rect.width)),
+                y: Math.round((e.clientY - rect.top) * (img.naturalHeight / rect.height))
+            };
+        }
+        img.addEventListener('mousedown', e => sendInput({ type: 'mousedown', ...coords(e), button: 'left' }));
+        img.addEventListener('mouseup', e => sendInput({ type: 'mouseup', ...coords(e), button: 'left' }));
+
+        document.addEventListener('keydown', e => {
+            if (document.activeElement === address) return;   // typing in the URL bar
+            if (e.key === 'r' && (e.metaKey || e.ctrlKey)) return;
+            if (e.key.length === 1) sendInput({ type: 'keydown', text: e.key });
+            else if (e.key === 'Enter') sendInput({ type: 'keydown', text: '\r' });
+            else if (e.key === 'Backspace') sendInput({ type: 'keydown', text: '\b' });
+        });
+
+        function refreshImage() {
+            if (!activeTab) return;
+            const src = `/api/screen?tab=${activeTab}&t=${Date.now()}`;
+            const tmp = new Image();
+            tmp.onload = () => { img.src = src; };
+            tmp.src = src;
+        }
+        setInterval(refreshImage, 1000);
+        setInterval(buildTabs, 5000);   // pick up new/closed tabs and url changes
+
+        async function updateStats() {
+            try {
+                const d = await (await fetch('/api/stats')).json();
+                document.getElementById('memVal').innerText = `${d.memUsedGB}/${d.memTotalGB}GB`;
+                document.getElementById('memBar').style.width = `${d.memPct}%`;
+                document.getElementById('cpuVal').innerText = `${Math.round(d.cpu)}%`;
+                const h = Math.floor(d.uptime / 3600), m = Math.floor((d.uptime % 3600) / 60);
+                document.getElementById('uptimeVal').innerText = `${h}h ${m}m`;
+            } catch (e) { console.error(e); }
+        }
+        setInterval(updateStats, 2000);
+
+        buildTabs().then(refreshImage);
+        updateStats();
+    </script>
+</body>
+
+</html>

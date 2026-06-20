@@ -1,0 +1,30 @@
+# Runs the whole stack in one container: headless Chrome + 2 extensions + the monitor
+# (which also serves the API gateway) + the two backend servers.
+#
+# The chrome image (built from ./Dockerfile) now bakes in both servers and start_hf.sh
+# launches them on localhost alongside Chrome — exactly what the extensions expect (they dial
+# 127.0.0.1:9225/9226). So there are no separate server containers anymore; that would
+# collide on the same ports. Only port 3001 is published.
+#
+# Internal port map (all on the container's 127.0.0.1):
+#   chrome   : 9222 CDP, 9223 CDP-proxy
+#   monitor  : 3001 UI + API gateway (/gpt /gemini)
+#   chatgpt  : 9225 (ws + http API)
+#   gemini   : 8000 http API, 9226 cookie-WS
+
+services:
+  chrome:
+    build: .
+    platform: linux/amd64
+    ports:
+      - "3001:3001"   # monitor UI + API gateway (the only published port)
+    environment:
+      API_KEY: ${API_KEY:-}   # gates /gpt /gemini; from .env. Unset = APIs disabled (503)
+    volumes:
+      - chrome-profile:/home/chrome/data   # persists cookies/logins across restarts
+    restart: unless-stopped
+
+# Named volume keeps the Chrome profile (logins/cookies) across `docker compose down/up`
+# and host reboots — the self-host equivalent of HF persistent storage, no Postgres needed.
+volumes:
+  chrome-profile:

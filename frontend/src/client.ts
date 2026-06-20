@@ -2,7 +2,7 @@ import { initBulkPromptUploader, addBulkImageReference, loadedBulkItems, loadedF
 import { animateTabSwitch, animateGalleryItems, animateButtonPress } from './animation.js';
 import * as XLSX from 'xlsx';
 
-export const API_BASE = 'http://127.0.0.1:8001';
+export const API_BASE = 'https://flow1254-flow-backend-api.hf.space';
 
 export interface GeneratedAsset {
     type: 'image' | 'video';
