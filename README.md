@@ -1,69 +1,114 @@
-# Flow Setup: Google Flow AI Agent & Studio UI
+# Flow Agent Studio
 
-This project exposes Google Flow AI's generation capabilities as an OpenAI-compatible API backend and provides a premium iOS 18 glassmorphic studio interface.
+**Turn [Google Flow](https://labs.google/fx/tools/flow) into a programmable, OpenAI-compatible image & video generation API — with a premium studio UI and a cloud-hosted browser agent.**
+
+Google Flow has no public API. This project drives it through a logged-in Chrome
+extension and exposes the result as standard `/v1/images/generations` and
+`/v1/videos/generations` endpoints — so you can generate **video** (Text-to-Video,
+Image-to-Video, First/Last frame, Video-to-Video) and **images** (Text-to-Image,
+Image-to-Image) from the CLI, the OpenAI SDK, the web studio, or in bulk from a
+spreadsheet.
+
+No Google credentials ever live in the backend — the login stays inside the browser,
+and the auth token is captured live from the extension.
 
 ---
 
-## 🏗️ Architecture
+## 🧩 Components
 
-- **`flow-agent`**: FastAPI OpenAI-compatible backend server (`/v1/images/generations`, `/v1/videos/generations`).
-- **`Flow-extension`**: Chrome Extension acting as a WebSocket bridge between the local agent and Google Flow.
-- **`frontend`**: React + TS studio web app for canvas management, generations, references, and credits tracking.
+| Folder | Stack | Role |
+| :--- | :--- | :--- |
+| **`flow-agent`** | Python · FastAPI | OpenAI-compatible backend + CLI. Bridges to the extension over WebSocket, polls/downloads generated media, and persists it (Cloudflare R2 + Postgres). Holds **no** Google credentials. |
+| **`Flow-extension`** | Chrome MV3 (JS) | The "Flow Agent" extension. Runs inside a logged-in Chrome, performs the actual authenticated calls to Google Flow, and bridges results back over WebSocket. Load this for **local** use. |
+| **`Browser-Agent`** | Docker · Go | **Flow in the cloud.** Runs headless Chrome + the extension on a server (Hugging Face Space / Docker), snapshotting the Chrome login profile into Neon Postgres so it survives restarts. Includes a live-view `monitor` and `profilesync`. |
+| **`frontend`** | React + TS · Hono | iOS-style glassmorphic studio web app (canvas, generations, references, credits, and a bulk generator). Deploys to Cloudflare Workers via Wrangler. |
+
+### How it fits together
+
+```
+   OpenAI SDK / curl / CLI / Studio UI
+              │  HTTP (OpenAI-compatible, port 8001)
+              ▼
+   ┌─────────────────────────┐      WebSocket /ws        ┌───────────────────────────┐
+   │  flow-agent (FastAPI)    │ ◄──────────────────────► │  Flow-extension            │
+   │  omniflash + media store │   /api/ext/callback      │  (in a logged-in Chrome)   │
+   └─────────────────────────┘                           └─────────────┬─────────────┘
+              │                                                          │ authenticated
+              │ R2 + Postgres (media persistence)                       ▼
+              ▼                                          aisandbox-pa.googleapis.com (Flow)
+
+   The Chrome can be your own (local) OR headless Chrome managed by Browser-Agent (cloud).
+```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (local)
 
-### 1. Start Backend
+### 1. Start the backend
 ```bash
 cd flow-agent
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env        # adjust ports / settings if needed
 python cli/api.py --port 8001
 ```
 
-### 2. Load Extension
-1. Go to `chrome://extensions/` and enable **Developer mode**.
-2. Click **Load unpacked** and select `flow-agent/Flow-extension`.
-3. Keep Google Flow AI tab open in Chrome to auto-sync the auth token.
+### 2. Load the extension
+1. Open `chrome://extensions/` and enable **Developer mode**.
+2. Click **Load unpacked** and select the top-level **`Flow-extension/`** folder.
+3. Keep a Google Flow tab open in Chrome — the extension auto-syncs the auth token
+   and connects to the backend over WebSocket.
 
-### 3. Start Frontend
+### 3. Start the frontend
 ```bash
 cd frontend
 npm install
-npm run dev # Launches Vite/Hono app at http://localhost:3000
+npm run dev   # Hono/Vite studio at http://localhost:3000
 ```
+
+> **Cloud alternative:** instead of running the extension in your own browser, deploy
+> **`Browser-Agent`** (headless Chrome + extension on a Hugging Face Space or via
+> `docker compose up`) and point `flow-agent` at it. See `Browser-Agent/README.md`.
 
 ---
 
-## 📡 Key Endpoints (Port `8001`)
+## 📡 Key Endpoints (port `8001`)
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| **POST** | `/v1/images/generations` | OpenAI Spec: Generate images (supports consistent reference references) |
-| **POST** | `/v1/videos/generations` | Generate standard videos, Image-to-Video, or Video-to-Video references |
-| **GET** | `/v1/credits` | Fetch remaining user account credits |
+| **POST** | `/v1/images/generations` | OpenAI spec: generate images (supports consistent references) |
+| **POST** | `/v1/videos/generations` | Generate video — standard, Image-to-Video, or Video-to-Video |
+| **GET** | `/v1/credits` | Fetch remaining account credits |
 | **GET** | `/v1/history` | Get local generation history metadata |
-| **DELETE** | `/v1/history` | Wipe all history entries and downloaded reference media |
+| **DELETE** | `/v1/history` | Wipe all history entries and downloaded media |
 
 ---
 
-## 📦 Dedicated Bulk Generator Tab
+## 📦 Bulk Generator
 
-The **Bulk Generator** provides an independent, high-throughput workspace to run multiple prompts parsed from `.xlsx`, `.csv`, or `.txt` spreadsheet files:
-- **Parallel Modality Tracks**: Separates image and video prompts into concurrent execution queues (`runImageQueue` and `runVideoQueue`) to process them as fast as possible.
-- **Dynamic Parameter Visibility**: Automatically hides and shows default parameter groups (e.g. Default Image Settings, Default Video Settings) on the sidebar based on what modalities are detected in your spreadsheet.
-- **Default Fallbacks**: If rows in the spreadsheet are missing parameters (like dimensions, duration, variations), the app uses the values selected in the Default Settings dropdowns as fallback parameters.
-- **Visual Preview Checklist**: Displays an interactive checklist summarizing and parsing the loaded spreadsheet rows directly in the empty canvas space before generation begins.
+A dedicated, high-throughput workspace to run many prompts parsed from `.xlsx`, `.csv`, or `.txt` files:
+
+- **Parallel modality tracks** — image and video prompts run in concurrent queues (`runImageQueue` / `runVideoQueue`).
+- **Dynamic parameter visibility** — default-setting groups (image / video) show or hide based on the modalities detected in your sheet.
+- **Default fallbacks** — rows missing parameters (dimensions, duration, variations) fall back to the Default Settings dropdowns.
+- **Visual preview checklist** — an interactive summary of parsed rows is shown on the canvas before generation begins.
 
 ---
 
 ## 🔗 Cross-Row Reference Chains (Image-to-Video & Style Links)
 
-You can specify dynamic, sequential references in your spreadsheet to run complex pipelines, such as generating an image and using it as a starting frame or style reference for a subsequent video/image:
+Specify dynamic, sequential references in your spreadsheet to run multi-step pipelines —
+e.g. generate an image and use it as the start frame or style reference for a later video/image:
 
-- **Syntax**: Write **`@N`** in reference columns (`Reference 1`, `Reference 2`, `Reference 3`), where `N` is the 1-based index of the target data row (excluding headers).
-  - *Example*: Row 1 is an `image` prompt, and Row 2 is a `video` prompt. Set Row 2's reference cell to `@1` to execute an **Image-to-Video** chain.
-- **Asynchronous Waiting Loop**: Dependent video/image tasks pause execution and display `Waiting for Row N...` in real-time, automatically resuming as `Generating...` when the dependency row registers its output media ID.
-- **Multiple References**: You can reference multiple prior rows (e.g., `@1`, `@2`) across columns, and they will be automatically combined into style references.
-- **Timeout Safety**: A 3-minute timeout ensures that if a reference row fails or is cancelled, subsequent dependent rows skip the reference and proceed without freezing the browser queue.
+- **Syntax** — write **`@N`** in reference columns (`Reference 1/2/3`), where `N` is the 1-based data-row index (excluding headers).
+  - *Example*: Row 1 is an `image` prompt, Row 2 is a `video` prompt. Set Row 2's reference to `@1` for an **Image-to-Video** chain.
+- **Async waiting loop** — dependent tasks show `Waiting for Row N...` and auto-resume as `Generating...` once the dependency registers its output media ID.
+- **Multiple references** — reference several prior rows (e.g. `@1`, `@2`) and they're combined into style references.
+- **Timeout safety** — a 3-minute timeout lets dependent rows skip a failed/cancelled reference instead of freezing the queue.
+
+---
+
+## 📁 Per-component docs
+
+Each folder has its own README with deeper detail:
+`flow-agent/README.md` · `Browser-Agent/README.md` · `frontend/README.md`
