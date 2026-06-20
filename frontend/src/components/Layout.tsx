@@ -15,6 +15,8 @@ export const Layout = () => {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        {/* Favicon */}
+        <link rel="icon" type="image/png" href="/static/public/logo.png" />
         {/* Stylesheet */}
         <link rel="stylesheet" href={`/static/public/style.css?v=${Date.now()}`} />
       </head>

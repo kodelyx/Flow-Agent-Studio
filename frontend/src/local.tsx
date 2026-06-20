@@ -40,6 +40,18 @@ app.get('/static/public/logo.png', async (c) => {
   }
 })
 
+app.get('/logo.png', async (c) => {
+  try {
+    const logoPath = join(process.cwd(), 'public', 'logo.png')
+    const content = await fs.readFile(logoPath)
+    c.header('Content-Type', 'image/png')
+    return c.body(content)
+  } catch (e) {
+    console.error('Error serving logo.png:', e)
+    return c.text('Logo not found', 404)
+  }
+})
+
 serve({
   fetch: app.fetch,
   port: 3000

@@ -9,6 +9,10 @@ app.get('/static/public/:filename', (c) => {
   return c.redirect(`/${filename}`)
 })
 
+app.get('/favicon.ico', (c) => {
+  return c.redirect('/logo.png')
+})
+
 app.get('/', (c) => {
   return c.html(<Layout />)
 })
