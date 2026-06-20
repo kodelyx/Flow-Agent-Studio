@@ -111,4 +111,4 @@ e.g. generate an image and use it as the start frame or style reference for a la
 ## 📁 Per-component docs
 
 Each folder has its own README with deeper detail:
-`flow-agent/README.md` · `Browser-Agent/README.md` · `frontend/README.md`
+`flow-agent/README.md` · `Browser-Agent/README.md`
