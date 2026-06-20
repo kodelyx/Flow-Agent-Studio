@@ -2,7 +2,7 @@
   "name": "frontend",
   "type": "module",
   "scripts": {
-    "dev": "esbuild src/client.ts --bundle --outfile=public/app.js --watch=forever & tsx watch src/index.tsx",
+    "dev": "esbuild src/client.ts --bundle --outfile=public/app.js --watch=forever & tsx watch src/local.tsx",
     "build": "tsc && npm run build:client",
     "build:client": "esbuild src/client.ts --bundle --minify --outfile=public/app.js",
     "start": "node dist/index.js"
