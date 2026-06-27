@@ -6,6 +6,20 @@ It bridges to the **Flow Agent Chrome extension** (running inside `Browser-Agent
 
 ---
 
+## 🖼️ User Interface (UI) Screenshots
+
+Here is a visual overview of the Flow Agent Studio:
+
+| **Dashboard Overview** | **Generation Panel** |
+|:---:|:---:|
+| ![Dashboard](../assets/image.png) | ![Generation](../assets/image_copy.png) |
+
+| **History Gallery** | **Chrome Monitor** |
+|:---:|:---:|
+| ![History](../assets/image_copy_2.png) | ![Monitor](../assets/image_copy_3.png) |
+
+---
+
 ## 🛠️ Setup & Run
 
 ### 1. Configure Environment
