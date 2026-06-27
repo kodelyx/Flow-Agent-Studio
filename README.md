@@ -12,6 +12,20 @@ spreadsheet.
 No Google credentials ever live in the backend — the login stays inside the browser,
 and the auth token is captured live from the extension.
 
+---
+
+## 🖼️ User Interface (UI) Screenshots
+
+| **Dashboard Overview** | **Generation Panel** |
+|:---:|:---:|
+| ![Dashboard](assets/dashboard.png) | ![Generation](assets/generation.png) |
+
+| **History Gallery** | **Chrome Monitor** |
+|:---:|:---:|
+| ![History](assets/gallery.png) | ![Monitor](assets/monitor.png) |
+
+---
+
 ## 🚀 Quick Start (1-Click Docker Deploy)
 
 To deploy the entire stack locally in one step, make sure **OrbStack** (or Docker Desktop) is running, then execute:
