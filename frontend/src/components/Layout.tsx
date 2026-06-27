@@ -4,13 +4,15 @@ import { Controls } from './Controls.js'
 import { Gallery } from './Gallery.js'
 import { Lightbox } from './Lightbox.js'
 
-export const Layout = () => {
+export const Layout = ({ apiBase }: { apiBase?: string }) => {
   return (
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Flow-Agent</title>
+        {/* Dynamic API Base config */}
+        <script dangerouslySetInnerHTML={{ __html: `window.__API_BASE__ = ${JSON.stringify(apiBase || '')};` }} />
         {/* Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
@@ -56,7 +58,7 @@ export const Layout = () => {
         <div class="ios-toast-container" id="toast-container"></div>
 
         {/* Script */}
-        <script src={`/static/public/app.js?v=${Date.now()}`}></script>
+        <script type="module" src={`/static/public/app.js?v=${Date.now()}`}></script>
       </body>
     </html>
   )

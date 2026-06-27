@@ -2,7 +2,11 @@ import { initBulkPromptUploader, addBulkImageReference, loadedBulkItems, loadedF
 import { animateTabSwitch, animateGalleryItems, animateButtonPress } from './animation.js';
 import * as XLSX from 'xlsx';
 
-export const API_BASE = 'https://flow1254-flow-backend-api.hf.space';
+export const API_BASE = (typeof window !== 'undefined' && (window as any).__API_BASE__)
+    ? (window as any).__API_BASE__
+    : (typeof window !== 'undefined' && window.location.hostname !== 'localhost')
+        ? 'https://flow1254-flow-backend-api.hf.space'
+        : `http://${window?.location?.hostname || 'localhost'}:8001`;
 
 export interface GeneratedAsset {
     type: 'image' | 'video';

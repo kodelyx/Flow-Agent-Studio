@@ -103,6 +103,11 @@ with open(pref_path, 'w') as f:
     json.dump(data, f)
 " 2>/dev/null || true
 
+# 4b. Configure Extension WS URL dynamically from environment
+BACKEND_WS_URL=${BACKEND_WS_URL:-"ws://backend:8001/ws"}
+echo "🔧 Configuring Extension WebSocket URL to: $BACKEND_WS_URL"
+sed -i "s|const AGENT_WS_URL = '.*';|const AGENT_WS_URL = '${BACKEND_WS_URL}';|g" /opt/Flow-extension/background.js
+
 # 5. Start Monitor Server (Exposed on 7860 to keep HF healthy and show view)
 echo "🚀 Starting Go Monitor Server..."
 touch /home/chrome/chrome.log

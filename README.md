@@ -12,15 +12,28 @@ spreadsheet.
 No Google credentials ever live in the backend — the login stays inside the browser,
 and the auth token is captured live from the extension.
 
+## 🚀 Quick Start (1-Click Docker Deploy)
+
+To deploy the entire stack locally in one step, make sure **OrbStack** (or Docker Desktop) is running, then execute:
+
+```bash
+cd Flow-Agent-Studio
+docker compose up --build -d
+```
+
+### Accessing the Stack:
+- **🎨 Frontend UI:** [http://localhost:3000](http://localhost:3000)
+- **⚡ Backend API:** [http://localhost:8001](http://localhost:8001)
+- **🌐 Chrome Monitor:** [http://localhost:3001](http://localhost:3001) (Go here first to sign in to Google Flow inside the headless browser container)
+
 ---
 
 ## 🧩 Components
 
 | Folder | Stack | Role |
 | :--- | :--- | :--- |
-| **`flow-agent`** | Python · FastAPI | OpenAI-compatible backend + CLI. Bridges to the extension over WebSocket, polls/downloads generated media, and persists it (Cloudflare R2 + Postgres). Holds **no** Google credentials. |
-| **`Flow-extension`** | Chrome MV3 (JS) | The "Flow Agent" extension. Runs inside a logged-in Chrome, performs the actual authenticated calls to Google Flow, and bridges results back over WebSocket. Load this for **local** use. |
-| **`Browser-Agent`** | Docker · Go | **Flow in the cloud.** Runs headless Chrome + the extension on a server (Hugging Face Space / Docker), snapshotting the Chrome login profile into Neon Postgres so it survives restarts. Includes a live-view `monitor` and `profilesync`. |
+| **`flow-agent`** | Python · FastAPI | OpenAI-compatible backend + CLI. Bridges to the extension over WebSocket, polls/downloads generated media, and persists it (Cloudflare R2 + Postgres). |
+| **`Browser-Agent`** | Docker · Go | **Flow in the cloud.** Runs headless Chrome + the extension on a server (Hugging Face Space / Docker). Includes a live-view `monitor` and is fully dynamic. |
 | **`frontend`** | React + TS · Hono | iOS-style glassmorphic studio web app (canvas, generations, references, credits, and a bulk generator). Deploys to Cloudflare Workers via Wrangler. |
 
 ### How it fits together
@@ -31,44 +44,12 @@ and the auth token is captured live from the extension.
               ▼
    ┌─────────────────────────┐      WebSocket /ws        ┌───────────────────────────┐
    │  flow-agent (FastAPI)    │ ◄──────────────────────► │  Flow-extension            │
-   │  omniflash + media store │   /api/ext/callback      │  (in a logged-in Chrome)   │
+   │  omniflash + media store │   /api/ext/callback      │  (in Browser-Agent Chrome) │
    └─────────────────────────┘                           └─────────────┬─────────────┘
               │                                                          │ authenticated
               │ R2 + Postgres (media persistence)                       ▼
               ▼                                          aisandbox-pa.googleapis.com (Flow)
-
-   The Chrome can be your own (local) OR headless Chrome managed by Browser-Agent (cloud).
 ```
-
----
-
-## 🚀 Quick Start (local)
-
-### 1. Start the backend
-```bash
-cd flow-agent
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # adjust ports / settings if needed
-python cli/api.py --port 8001
-```
-
-### 2. Load the extension
-1. Open `chrome://extensions/` and enable **Developer mode**.
-2. Click **Load unpacked** and select the top-level **`Flow-extension/`** folder.
-3. Keep a Google Flow tab open in Chrome — the extension auto-syncs the auth token
-   and connects to the backend over WebSocket.
-
-### 3. Start the frontend
-```bash
-cd frontend
-npm install
-npm run dev   # Hono/Vite studio at http://localhost:3000
-```
-
-> **Cloud alternative:** instead of running the extension in your own browser, deploy
-> **`Browser-Agent`** (headless Chrome + extension on a Hugging Face Space or via
-> `docker compose up`) and point `flow-agent` at it. See `Browser-Agent/README.md`.
 
 ---
 

@@ -1,0 +1,14 @@
+node_modules/
+.DS_Store
+.env
+.env.*
+dist/
+build/
+*.log
+*.tmp
+frontend/node_modules/
+flow-agent/output/
+flow-agent/__pycache__/
+flow-agent/**/*.pyc
+flow-agent/media_store/
+flow-agent/media_store_db/

@@ -28,7 +28,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from omniflash import ExtensionBridge, DEFAULT_PROJECT
 from omniflash.generators.t2i import generate_image, download_image
-from omniflash import storage, db
 
 # Setup logging
 log = logging.getLogger("omniflash.openai_api")
@@ -55,19 +54,7 @@ def _content_type(filename: str) -> str:
 
 
 async def publish(filename: str, out_path: str):
-    """Make a generated file web-accessible.
-
-    Uploads to Cloudflare R2 when configured (returns the permanent R2 URL and
-    its object key); otherwise returns the local /download URL and a None key.
-    """
-    if storage.is_enabled():
-        try:
-            url = await asyncio.to_thread(
-                storage.upload, out_path, filename, _content_type(filename)
-            )
-            return url, filename
-        except Exception:
-            log.exception("R2 upload failed; falling back to local URL")
+    """Make a generated file web-accessible."""
     return public_url(filename), None
 
 # ExtensionBridge lifecycle
@@ -79,16 +66,6 @@ async def lifespan(app: FastAPI):
     log.info("🚀 Starting Flow Agent Extension Bridge (OpenAI Interface)...")
     bridge = ExtensionBridge()
     await bridge.start()
-
-    # Ensure the media metadata table exists (no-op if DATABASE_URL unset)
-    if db.is_enabled():
-        try:
-            await asyncio.to_thread(db.init)
-            log.info("🗄️  Postgres media store enabled")
-        except Exception:
-            log.exception("DB init failed; history will fall back to disk")
-    if storage.is_enabled():
-        log.info("☁️  R2 media storage enabled")
 
     # Run extension connection in background
     asyncio.create_task(bridge.wait_for_extension(timeout=30))
@@ -670,13 +647,7 @@ async def upload_file_endpoint(req: UploadRequest):
 
 # History Management Helper
 async def append_to_history(type_str: str, url: str, prompt: str, media_id: str = None, r2_key: str = None):
-    """Record a generation. Uses Postgres when configured, else history.json."""
-    if db.is_enabled():
-        try:
-            await asyncio.to_thread(db.insert, type_str, url, prompt, media_id, r2_key)
-            return
-        except Exception:
-            log.exception("DB insert failed; falling back to history.json")
+    """Record a generation. Uses history.json."""
     _append_history_file(type_str, url, prompt, media_id)
 
 
@@ -708,16 +679,6 @@ def _append_history_file(type_str: str, url: str, prompt: str, media_id: str = N
 @app.get("/v1/history")
 async def get_history():
     """Get previously generated images and videos."""
-    if db.is_enabled():
-        try:
-            rows = await asyncio.to_thread(db.list_media, 100)
-            return {"history": [
-                {k: row[k] for k in ("type", "url", "prompt", "timestamp", "media_id")}
-                for row in rows
-            ]}
-        except Exception:
-            log.exception("DB history fetch failed; falling back to history.json")
-
     history_file = os.path.join(OUTPUT_DIR, "history.json")
     if not os.path.exists(history_file):
         # Auto-detect existing generated files to populate initial history
@@ -757,15 +718,6 @@ async def get_history():
 @app.delete("/v1/history")
 async def delete_all_history():
     """Clear all generation history and delete files."""
-    # Clear DB rows + their R2 objects when configured
-    if db.is_enabled():
-        try:
-            keys = await asyncio.to_thread(db.delete_all)
-            for key in keys:
-                await asyncio.to_thread(storage.delete, key)
-        except Exception:
-            log.exception("DB/R2 clear failed")
-
     history_file = os.path.join(OUTPUT_DIR, "history.json")
     try:
         if os.path.exists(history_file):
@@ -785,16 +737,6 @@ async def delete_all_history():
 @app.delete("/v1/history/{filename}")
 async def delete_history_item(filename: str):
     """Delete a single history item and its corresponding file."""
-    # Remove matching DB rows + R2 objects when configured
-    if db.is_enabled():
-        try:
-            keys = await asyncio.to_thread(db.delete_by_url, filename)
-            for key in keys:
-                await asyncio.to_thread(storage.delete, key)
-            return {"status": "success", "deleted": len(keys)}
-        except Exception:
-            log.exception("DB/R2 delete failed; falling back to disk")
-
     history_file = os.path.join(OUTPUT_DIR, "history.json")
 
     # Delete from disk
@@ -856,6 +798,11 @@ async def get_flow_credits():
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/")
+async def root():
+    return {"status": "running", "service": "Flow Agent API"}
 
 
 # Health Check

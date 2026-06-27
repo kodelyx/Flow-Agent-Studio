@@ -2,20 +2,17 @@
   "name": "frontend",
   "type": "module",
   "scripts": {
-    "dev": "esbuild src/client.ts --bundle --outfile=public/app.js --watch=forever & tsx watch src/local.tsx",
-    "build": "tsc && npm run build:client",
-    "build:client": "esbuild src/client.ts --bundle --minify --outfile=public/app.js",
-    "start": "node dist/index.js"
+    "dev": "bun build src/client.ts --outfile=public/app.js --watch & bun --hot src/local.tsx",
+    "build": "tsc --noEmit && bun run build:client",
+    "build:client": "bun build src/client.ts --outfile=public/app.js --minify",
+    "start": "bun src/local.tsx"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.5",
-    "hono": "^4.12.26",
-    "xlsx": "^0.18.5"
+    "hono": "latest",
+    "xlsx": "latest"
   },
   "devDependencies": {
-    "@types/node": "^20.11.17",
-    "esbuild": "^0.20.1",
-    "tsx": "^4.7.1",
-    "typescript": "^5.8.3"
+    "@types/node": "latest",
+    "typescript": "^7.0.1-rc"
   }
 }

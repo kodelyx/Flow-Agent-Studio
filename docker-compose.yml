@@ -1,0 +1,56 @@
+# Flow Agent Studio — All-in-One Local Deployment
+# Run: docker compose up --build -d
+# Frontend:      http://localhost:3000
+# Backend API:   http://localhost:8001
+# Chrome Monitor: http://localhost:3001
+
+services:
+  backend:
+    build: ./flow-agent
+    ports:
+      - "8001:8001"    # OpenAI-compatible API + WebSocket /ws
+      - "8100:8100"    # HTTP callback for Extension
+    environment:
+      - WS_PORT=9227
+      - HTTP_PORT=8100
+      - API_HOST=0.0.0.0
+      - API_PORT=8001
+      - OPENAI_API_HOST=0.0.0.0
+      - OPENAI_API_PORT=8001
+      - API_SSL=false
+      - DEFAULT_PROJECT=0143adf4-5864-4cb4-abb5-fe4254ad0dc7
+      - IMAGE_MODEL=NARWHAL
+      - POLL_INTERVAL=10
+      - POLL_TIMEOUT=420
+      - PUBLIC_BASE_URL=http://localhost:8001
+    volumes:
+      - backend-output:/app/output
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"    # Studio Web UI
+    environment:
+      - API_BASE=http://localhost:8001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  chrome:
+    build: ./Browser-Agent
+    platform: linux/amd64
+    ports:
+      - "3001:3001"    # Monitor UI + live Chrome view
+    environment:
+      - API_KEY=${API_KEY:-}
+      - BACKEND_WS_URL=ws://backend:8001/ws
+    volumes:
+      - chrome-profile:/home/chrome/data
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-output:
+  chrome-profile:

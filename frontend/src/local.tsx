@@ -1,4 +1,3 @@
-import { serve } from '@hono/node-server'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import app from './index.js'
@@ -52,9 +51,10 @@ app.get('/logo.png', async (c) => {
   }
 })
 
-serve({
-  fetch: app.fetch,
-  port: 3000
-}, (info) => {
-  console.log(`Server is running on http://localhost:${info.port}`)
-})
+const port = 3000
+console.log(`Server is running on http://localhost:${port}`)
+
+export default {
+  port,
+  fetch: app.fetch
+}
