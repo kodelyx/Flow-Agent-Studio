@@ -46,8 +46,8 @@ docker compose up --build -d
 
 | Folder | Stack | Role |
 | :--- | :--- | :--- |
-| **`flow-agent`** | Python · FastAPI | OpenAI-compatible backend + CLI. Bridges to the extension over WebSocket, polls/downloads generated media, and persists it (Cloudflare R2 + Postgres). |
-| **`Browser-Agent`** | Docker · Go | **Flow in the cloud.** Runs headless Chrome + the extension on a server (Hugging Face Space / Docker). Includes a live-view `monitor` and is fully dynamic. |
+| **`flow-agent`** | Python · FastAPI | OpenAI-compatible backend + CLI. Bridges to the extension over WebSocket, polls/downloads generated media, and stores it locally. |
+| **`Browser-Agent`** | Docker · Go | **Flow in the cloud.** Runs headless Chrome + the extension inside a Docker container. Includes a live-view `monitor` and is fully dynamic. |
 | **`frontend`** | React + TS · Hono | iOS-style glassmorphic studio web app (canvas, generations, references, credits, and a bulk generator). Deploys to Cloudflare Workers via Wrangler. |
 
 ### How it fits together
@@ -61,7 +61,7 @@ docker compose up --build -d
    │  omniflash + media store │   /api/ext/callback      │  (in Browser-Agent Chrome) │
    └─────────────────────────┘                           └─────────────┬─────────────┘
               │                                                          │ authenticated
-              │ R2 + Postgres (media persistence)                       ▼
+              │ Local Storage (media persistence)                       ▼
               ▼                                          aisandbox-pa.googleapis.com (Flow)
 ```
 
