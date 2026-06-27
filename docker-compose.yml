@@ -6,6 +6,7 @@
 
 services:
   backend:
+    image: akashyadav758/flow-agent-studio-backend:latest
     build: ./flow-agent
     ports:
       - "8001:8001"    # OpenAI-compatible API + WebSocket /ws
@@ -28,6 +29,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    image: akashyadav758/flow-agent-studio-frontend:latest
     build: ./frontend
     ports:
       - "3000:3000"    # Studio Web UI
@@ -38,6 +40,7 @@ services:
     restart: unless-stopped
 
   chrome:
+    image: akashyadav758/flow-agent-studio-chrome:latest
     build: ./Browser-Agent
     platform: linux/amd64
     ports:
